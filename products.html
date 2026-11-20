@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chuyên đề &amp; Phòng Lab Toán — MathLab Mini</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- KaTeX -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+    />
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+    ></script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+    ></script>
+
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/responsive.css" />
+  </head>
+  <body>
+    <!-- NAVBAR -->
+    <header class="navbar">
+      <div class="container navbar-inner">
+        <a href="index.html" class="brand">
+          <div class="brand-logo">∑∫</div>
+          <div>MathLab <span>Mini</span></div>
+        </a>
+
+        <nav class="nav-links" id="nav-links">
+          <a href="index.html">Trang chủ</a>
+          <a href="products.html">Chuyên đề &amp; Lab</a>
+          <a href="about.html">Giới thiệu</a>
+          <a href="contact.html">Liên hệ &amp; FAQ</a>
+        </nav>
+
+        <div class="nav-actions">
+          <button
+            class="icon-btn"
+            id="theme-toggle-btn"
+            title="Đổi giao diện Sáng / Tối"
+          >
+            🌙
+          </button>
+          <a href="auth.html" class="btn btn-sm btn-primary" id="nav-auth-btn"
+            >Đăng nhập</a
+          >
+          <button
+            class="icon-btn hamburger"
+            id="hamburger-btn"
+            aria-label="Mở menu"
+          >
+            ☰
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="section">
+      <div class="container">
+        <div class="section-header" style="margin-bottom: 32px">
+          <span class="subtitle">Thư viện Học liệu &amp; Thực hành</span>
+          <h2>Danh mục 7 Chuyên đề Toán Cao Cấp</h2>
+          <p>
+            Tìm kiếm, lọc theo học phần, học lý thuyết, giải bài tập hoặc tự tạo
+            thêm chuyên đề ghi chú của riêng bạn.
+          </p>
+        </div>
+
+        <!-- Thanh hiển thị Kinh nghiệm XP & Thống kê ôn tập thích ứng -->
+        <div class="xp-banner" id="xp-progress-banner"></div>
+        
+        <!-- THANH CÔNG CỤ TÌM KIẾM, LỌC, SẮP XẾP & THÊM CHUYÊN ĐỀ -->
+        <div class="toolbar">
+          <div class="toolbar-group" style="flex: 1">
+            <input
+              type="text"
+              id="search-topic"
+              class="input-control"
+              placeholder="🔍 Tìm tên chương, từ khóa (VD: Taylor, Gauss, Euclide)..."
+              oninput="renderTopicsGrid()"
+              style="min-width: 240px"
+            />
+            <select
+              id="filter-subject"
+              class="select-control"
+              onchange="renderTopicsGrid()"
+            >
+              <option value="all">Tất cả học phần</option>
+              <option value="Giải tích 1">Giải tích 1 (Chương 1–4)</option>
+              <option value="Đại số tuyến tính">
+                Đại số tuyến tính (Chương 5–7)
+              </option>
+            </select>
+            <select
+              id="filter-level"
+              class="select-control"
+              onchange="renderTopicsGrid()"
+            >
+              <option value="all">Mọi mức độ</option>
+              <option value="Cơ bản">Cơ bản</option>
+              <option value="Trung bình">Trung bình</option>
+              <option value="Nâng cao">Nâng cao</option>
+            </select>
+            <select
+              id="sort-topic"
+              class="select-control"
+              onchange="renderTopicsGrid()"
+            >
+              <option value="default">Thứ tự giáo trình</option>
+              <option value="title-asc">Tên A → Z</option>
+              <option value="title-desc">Tên Z → A</option>
+            </select>
+          </div>
+
+          <div class="toolbar-group">
+            <button
+              class="btn btn-sm btn-primary"
+              onclick="openTopicFormModal()"
+            >
+              ➕ Thêm chuyên đề
+            </button>
+            <button
+              class="btn btn-sm btn-outline"
+              onclick="resetDefaultTopics()"
+              title="Khôi phục dữ liệu mặc định"
+            >
+              ↺ Khôi phục gốc
+            </button>
+          </div>
+        </div>
+
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+          "
+        >
+          <span
+            id="topic-count-label"
+            style="font-weight: 700; color: var(--text-secondary)"
+            >Hiển thị 7 chuyên đề</span
+          >
+          <span style="font-size: 0.85rem; color: var(--text-muted)"
+            >Dữ liệu tự động lưu vào trình duyệt (LocalStorage)</span
+          >
+        </div>
+
+        <!-- LƯỚI HIỂN THỊ CÁC THẺ CHUYÊN ĐỀ -->
+        <div class="grid-3" id="topics-grid"></div>
+
+        <!-- =====================================================================
+           PHÒNG THÍ NGHIỆM TOÁN TƯƠNG TÁC (INTERACTIVE MATH LAB)
+           ===================================================================== -->
+        <section id="math-lab" class="lab-wrapper">
+          <div
+            style="
+              padding: 24px 28px 16px;
+              border-bottom: 1px solid var(--border-color);
+            "
+          >
+            <span class="badge badge-calc" style="margin-bottom: 8px"
+              >INTERACTIVE SANDBOX</span
+            >
+            <h2 style="font-size: 1.65rem">
+              🧪 Phòng Thí Nghiệm Toán Trực Quan
+            </h2>
+            <p style="color: var(--text-secondary); font-size: 0.95rem">
+              Thực hành khảo sát hàm số, tính đạo hàm/tích phân số và giải bài
+              toán Đại số tuyến tính ngay lập tức.
+            </p>
+          </div>
+
+          <!-- Các Tab chuyển đổi công cụ -->
+          <div class="lab-tabs">
+            <button
+              class="lab-tab active"
+              onclick="switchLabTab('lab-calc', this)"
+            >
+              📈 1. Đồ thị, Tiếp tuyến &amp; Tích phân
+            </button>
+            <button class="lab-tab" onclick="switchLabTab('lab-matrix', this)">
+              🔢 2. Phân tích Ma trận (det, rank, A⁻¹)
+            </button>
+            <button class="lab-tab" onclick="switchLabTab('lab-system', this)">
+              ⚖️ 3. Giải Hệ phương trình AX = b
+            </button>
+          </div>
+
+          <!-- PANEL 1: GIẢI TÍCH (CANVAS) -->
+          <div class="lab-panel active" id="lab-calc">
+            <div class="lab-grid">
+              <div>
+                <div class="form-group">
+                  <label for="calc-func">Hàm số y = f(x):</label>
+                  <input
+                    type="text"
+                    id="calc-func"
+                    class="input-control"
+                    value="x^3 - 3*x"
+                  />
+                </div>
+                <div class="grid-3" style="gap: 10px; margin-bottom: 16px">
+                  <div class="form-group" style="margin-bottom: 0">
+                    <label for="calc-x0">Tiếp điểm x₀:</label>
+                    <input
+                      type="number"
+                      step="any"
+                      id="calc-x0"
+                      class="input-control"
+                      value="1"
+                    />
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0">
+                    <label for="calc-a">Cận dưới a:</label>
+                    <input
+                      type="number"
+                      step="any"
+                      id="calc-a"
+                      class="input-control"
+                      value="0"
+                    />
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0">
+                    <label for="calc-b">Cận trên b:</label>
+                    <input
+                      type="number"
+                      step="any"
+                      id="calc-b"
+                      class="input-control"
+                      value="2"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  class="btn btn-primary"
+                  style="width: 100%; margin-bottom: 14px"
+                  onclick="runCalculusLab()"
+                >
+                  ▶ Vẽ đồ thị &amp; Tính toán
+                </button>
+
+                <div
+                  style="
+                    font-size: 0.84rem;
+                    font-weight: 700;
+                    margin-bottom: 8px;
+                    color: var(--text-secondary);
+                  "
+                >
+                  Hàm mẫu nhanh:
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px">
+                  <button
+                    class="btn btn-sm btn-outline"
+                    onclick="setCalcPreset('x^3 - 3*x', 1, 0, 2)"
+                  >
+                    x³ - 3x
+                  </button>
+                  <button
+                    class="btn btn-sm btn-outline"
+                    onclick="setCalcPreset('sin(x) + 0.5*x', 0, 0, 3.14)"
+                  >
+                    sin(x) + 0.5x
+                  </button>
+                  <button
+                    class="btn btn-sm btn-outline"
+                    onclick="setCalcPreset('exp(-0.4*x)*cos(2*x)', 0.5, 0, 3)"
+                  >
+                    e⁻⁰·⁴ˣcos(2x)
+                  </button>
+                  <button
+                    class="btn btn-sm btn-outline"
+                    onclick="setCalcPreset('4 - x^2', 1, -2, 2)"
+                  >
+                    4 - x²
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <div class="canvas-box" style="margin-bottom: 16px">
+                  <canvas id="calc-canvas" width="640" height="360"></canvas>
+                </div>
+                <div class="output-console" id="calc-output"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PANEL 2: PHÂN TÍCH MA TRẬN -->
+          <div class="lab-panel" id="lab-matrix">
+            <div class="lab-grid">
+              <div>
+                <div class="form-group">
+                  <label for="matrix-size">Chọn cấp ma trận vuông A:</label>
+                  <select
+                    id="matrix-size"
+                    class="select-control"
+                    onchange="
+                      renderMatrixGrid();
+                      analyzeMatrix();
+                    "
+                  >
+                    <option value="2">Ma trận vuông cấp 2 (2 × 2)</option>
+                    <option value="3" selected>
+                      Ma trận vuông cấp 3 (3 × 3)
+                    </option>
+                  </select>
+                </div>
+                <div style="margin-bottom: 18px; overflow-x: auto">
+                  <div class="matrix-grid" id="matrix-input-grid"></div>
+                </div>
+                <button
+                  class="btn btn-secondary"
+                  style="width: 100%"
+                  onclick="analyzeMatrix()"
+                >
+                  ⚡ Tính det(A), rank(A), Aᵀ &amp; A⁻¹
+                </button>
+              </div>
+              <div class="output-console" id="matrix-output"></div>
+            </div>
+          </div>
+
+          <!-- PANEL 3: GIẢI HỆ PHƯƠNG TRÌNH TUYẾN TÍNH -->
+          <div class="lab-panel" id="lab-system">
+            <div class="lab-grid">
+              <div>
+                <div class="form-group">
+                  <label for="sys-size">Chọn số ẩn của hệ AX = b:</label>
+                  <select
+                    id="sys-size"
+                    class="select-control"
+                    onchange="
+                      renderSystemGrid();
+                      solveLinearSystem();
+                    "
+                  >
+                    <option value="2">Hệ 2 phương trình, 2 ẩn (x, y)</option>
+                    <option value="3" selected>
+                      Hệ 3 phương trình, 3 ẩn (x, y, z)
+                    </option>
+                  </select>
+                </div>
+                <p
+                  style="
+                    font-size: 0.84rem;
+                    color: var(--text-muted);
+                    margin-bottom: 10px;
+                  "
+                >
+                  Nhập ma trận mở rộng [A | b] (cột cuối cùng là vế phải b):
+                </p>
+                <div style="margin-bottom: 18px; overflow-x: auto">
+                  <div class="matrix-grid" id="sys-input-grid"></div>
+                </div>
+                <button
+                  class="btn btn-primary"
+                  style="width: 100%"
+                  onclick="solveLinearSystem()"
+                >
+                  🔍 Khử Gauss &amp; Biện luận nghiệm
+                </button>
+              </div>
+              <div class="output-console" id="sys-output"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- MODAL 1: HỌC LÝ THUYẾT, BÀI TẬP & QUIZ -->
+    <div class="modal-backdrop" id="study-modal">
+      <div class="modal-box">
+        <div class="modal-header">
+          <div>
+            <div
+              id="study-modal-code"
+              style="font-size: 0.8rem; font-weight: 700; color: var(--primary)"
+            ></div>
+            <h3 id="study-modal-title" style="font-size: 1.25rem">
+              Tên chuyên đề
+            </h3>
+          </div>
+          <button class="icon-btn" onclick="closeModal('study-modal')">
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <div
+            style="
+              display: flex;
+              gap: 8px;
+              margin-bottom: 20px;
+              flex-wrap: wrap;
+            "
+          >
+            <button
+              class="btn btn-sm btn-primary"
+              data-study-tab="theory"
+              onclick="switchStudyTab('theory')"
+            >
+              📖 Lý thuyết &amp; Công thức
+            </button>
+            <button
+              class="btn btn-sm btn-outline"
+              data-study-tab="exercises"
+              onclick="switchStudyTab('exercises')"
+            >
+              ✍️ Bài tập tự luận
+            </button>
+            <button
+              class="btn btn-sm btn-outline"
+              data-study-tab="quiz"
+              onclick="switchStudyTab('quiz')"
+            >
+              🎯 Trắc nghiệm Quiz
+            </button>
+          </div>
+          <div id="study-modal-body"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeModal('study-modal')">
+            Đóng cửa sổ
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 2: THÊM / CHỈNH SỬA CHUYÊN ĐỀ (CRUD) -->
+    <div class="modal-backdrop" id="topic-form-modal">
+      <div class="modal-box" style="max-width: 580px">
+        <div class="modal-header">
+          <h3 id="topic-form-title">Thêm Chuyên đề Toán Mới</h3>
+          <button class="icon-btn" onclick="closeModal('topic-form-modal')">
+            ✕
+          </button>
+        </div>
+        <form id="topic-crud-form" onsubmit="handleSaveTopic(event)">
+          <div class="modal-body">
+            <input type="hidden" id="edit-topic-id" />
+            <div class="grid-2" style="gap: 14px">
+              <div class="form-group">
+                <label for="input-topic-code">Mã chương:</label>
+                <input
+                  type="text"
+                  id="input-topic-code"
+                  class="input-control"
+                  placeholder="VD: GT1 • CHƯƠNG 5"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="input-topic-subject">Học phần:</label>
+                <select id="input-topic-subject" class="select-control">
+                  <option value="Giải tích 1">Giải tích 1</option>
+                  <option value="Đại số tuyến tính">Đại số tuyến tính</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid-2" style="gap: 14px">
+              <div class="form-group">
+                <label for="input-topic-title">Tên chuyên đề:</label>
+                <input
+                  type="text"
+                  id="input-topic-title"
+                  class="input-control"
+                  placeholder="VD: Phương trình vi phân cấp 1"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="input-topic-level">Mức độ:</label>
+                <select id="input-topic-level" class="select-control">
+                  <option value="Cơ bản">Cơ bản</option>
+                  <option value="Trung bình">Trung bình</option>
+                  <option value="Nâng cao">Nâng cao</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="input-topic-summary"
+                >Tóm tắt nội dung trọng tâm:</label
+              >
+              <textarea
+                id="input-topic-summary"
+                class="textarea-control"
+                rows="3"
+                placeholder="Mô tả các định lý, phương pháp giải chính..."
+                required
+              ></textarea>
+            </div>
+            <div class="form-group" style="margin-bottom: 0">
+              <label for="input-topic-formula"
+                >Công thức đại diện (hỗ trợ LaTeX bọc trong $$...$$):</label
+              >
+              <input
+                type="text"
+                id="input-topic-formula"
+                class="input-control"
+                placeholder="$$y' + P(x)y = Q(x)$$"
+              />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-outline"
+              onclick="closeModal('topic-form-modal')"
+            >
+              Hủy
+            </button>
+            <button type="submit" class="btn btn-primary">
+              💾 Lưu chuyên đề
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-grid">
+          <div>
+            <a href="index.html" class="brand" style="margin-bottom: 12px">
+              <div class="brand-logo">∑∫</div>
+              <div>MathLab <span>Mini</span></div>
+            </a>
+            <p style="font-size: 0.9rem; color: var(--text-secondary)">
+              Nền tảng hỗ trợ sinh viên Công nghệ Thông tin học tập và trực quan
+              hóa kiến thức Giải tích 1 &amp; Đại số tuyến tính.
+            </p>
+          </div>
+          <div>
+            <h4>Điều hướng</h4>
+            <ul>
+              <li><a href="index.html">Trang chủ</a></li>
+              <li><a href="products.html">Chuyên đề &amp; Lab</a></li>
+              <li><a href="about.html">Giới thiệu dự án</a></li>
+              <li><a href="contact.html">Liên hệ &amp; FAQ</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4>Học phần</h4>
+            <ul>
+              <li><a href="products.html">Giải tích 1 (Chương 1–4)</a></li>
+              <li>
+                <a href="products.html">Đại số tuyến tính (Chương 5–7)</a>
+              </li>
+              <li>
+                <a href="products.html#math-lab">Đồ thị &amp; Tích phân số</a>
+              </li>
+              <li><a href="products.html#math-lab">Khử Gauss Ma trận</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4>Nhóm thực hiện</h4>
+            <ul>
+              <li><strong>Vũ Huy Hoàng</strong> — MSSV: 52.01.104.124</li>
+              <li><strong>Hồ Đắc Anh Khoa</strong> — MSSV: 52.01.104.042</li>
+              <li>Học phần: Thiết kế Web (CNTT — HCMUE)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span
+            >© 2026 MathLab Mini — Thực hiện bởi Vũ Huy Hoàng (52.01.104.124)
+            &amp; Hồ Đắc Anh Khoa (52.01.104.042).</span
+          >
+          <span>Khoa CNTT • Trường ĐH Sư phạm TP.HCM</span>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Script chuyển Tab trong Phòng thí nghiệm Toán -->
+    <script>
+      function switchLabTab(panelId, btnEl) {
+        document
+          .querySelectorAll(".lab-panel")
+          .forEach((p) => p.classList.remove("active"));
+        document
+          .querySelectorAll(".lab-tab")
+          .forEach((t) => t.classList.remove("active"));
+        const target = document.getElementById(panelId);
+        if (target) target.classList.add("active");
+        if (btnEl) btnEl.classList.add("active");
+      }
+    </script>
+    <script src="js/data.js"></script>
+    <script src="js/math-tools.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

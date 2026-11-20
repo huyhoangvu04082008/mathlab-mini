@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tài khoản Sinh viên — MathLab Mini</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/responsive.css" />
+  </head>
+  <body>
+    <!-- NAVBAR -->
+    <header class="navbar">
+      <div class="container navbar-inner">
+        <a href="index.html" class="brand">
+          <div class="brand-logo">∑∫</div>
+          <div>MathLab <span>Mini</span></div>
+        </a>
+
+        <nav class="nav-links" id="nav-links">
+          <a href="index.html">Trang chủ</a>
+          <a href="products.html">Chuyên đề &amp; Lab</a>
+          <a href="about.html">Giới thiệu</a>
+          <a href="contact.html">Liên hệ &amp; FAQ</a>
+        </nav>
+
+        <div class="nav-actions">
+          <button
+            class="icon-btn"
+            id="theme-toggle-btn"
+            title="Đổi giao diện Sáng / Tối"
+          >
+            🌙
+          </button>
+          <a href="auth.html" class="btn btn-sm btn-primary" id="nav-auth-btn"
+            >Đăng nhập</a
+          >
+          <button
+            class="icon-btn hamburger"
+            id="hamburger-btn"
+            aria-label="Mở menu"
+          >
+            ☰
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="section">
+      <div class="container">
+        <div class="section-header" style="margin-bottom: 36px">
+          <span class="subtitle">Cổng Sinh Viên</span>
+          <h2>Quản lý Tài khoản Học tập</h2>
+          <p>
+            Đăng nhập hoặc tạo tài khoản mới để lưu tiến độ ôn tập, điểm số Quiz
+            và bộ chuyên đề cá nhân.
+          </p>
+        </div>
+
+        <!-- GIAO DIỆN KHI CHƯA ĐĂNG NHẬP: ĐĂNG NHẬP & ĐĂNG KÝ -->
+        <div class="grid-2" id="auth-guest-view">
+          <!-- Form Đăng nhập -->
+          <div class="card">
+            <h3 style="margin-bottom: 6px">🔐 Đăng nhập</h3>
+            <p style="margin-bottom: 20px">
+              Dành cho sinh viên đã có tài khoản trên trình duyệt này.
+            </p>
+            <form onsubmit="handleLogin(event)">
+              <div class="form-group">
+                <label for="login-email"
+                  >Email hoặc Mã số sinh viên (MSSV):</label
+                >
+                <input
+                  type="text"
+                  id="login-email"
+                  class="input-control"
+                  placeholder="VD: 52.01.104.124 hoặc email..."
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="login-password">Mật khẩu:</label>
+                <input
+                  type="password"
+                  id="login-password"
+                  class="input-control"
+                  placeholder="Nhập mật khẩu..."
+                  required
+                />
+              </div>
+              <button type="submit" class="btn btn-primary" style="width: 100%">
+                Đăng nhập ngay
+              </button>
+            </form>
+          </div>
+
+          <!-- Form Đăng ký -->
+          <div class="card">
+            <h3 style="margin-bottom: 6px">✨ Đăng ký Tài khoản Mới</h3>
+            <p style="margin-bottom: 20px">
+              Tạo nhanh hồ sơ học tập miễn phí trong 10 giây.
+            </p>
+            <form onsubmit="handleRegister(event)">
+              <div class="grid-2" style="gap: 12px">
+                <div class="form-group">
+                  <label for="reg-name">Họ và tên:</label>
+                  <input
+                    type="text"
+                    id="reg-name"
+                    class="input-control"
+                    placeholder="Nguyễn Văn A"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="reg-student-id">Mã số sinh viên:</label>
+                  <input
+                    type="text"
+                    id="reg-student-id"
+                    class="input-control"
+                    placeholder="VD: 50.01.104.xxx"
+                  />
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="reg-email">Email:</label>
+                <input
+                  type="email"
+                  id="reg-email"
+                  class="input-control"
+                  placeholder="example@student.hcmue.edu.vn"
+                  required
+                />
+              </div>
+              <div class="grid-2" style="gap: 12px">
+                <div class="form-group">
+                  <label for="reg-password">Mật khẩu (≥ 6 ký tự):</label>
+                  <input
+                    type="password"
+                    id="reg-password"
+                    class="input-control"
+                    placeholder="••••••"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="reg-confirm">Xác nhận mật khẩu:</label>
+                  <input
+                    type="password"
+                    id="reg-confirm"
+                    class="input-control"
+                    placeholder="••••••"
+                    required
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                class="btn btn-secondary"
+                style="width: 100%"
+              >
+                Tạo tài khoản
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- GIAO DIỆN KHI ĐÃ ĐĂNG NHẬP: HỒ SƠ & ĐỔI MẬT KHẨU -->
+        <div
+          id="auth-profile-view"
+          style="display: none; max-width: 720px; margin: 0 auto"
+        >
+          <div class="xp-banner" id="xp-progress-banner"></div>
+          <div class="card" style="margin-bottom: 24px">
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 16px;
+              "
+            >
+              <div style="display: flex; align-items: center; gap: 16px">
+                <div
+                  style="
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 50%;
+                    background: linear-gradient(
+                      135deg,
+                      var(--primary),
+                      var(--secondary)
+                    );
+                    color: #fff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.6rem;
+                    font-weight: 800;
+                  "
+                >
+                  🎓
+                </div>
+                <div>
+                  <h3 id="profile-name" style="margin-bottom: 4px">
+                    Tên sinh viên
+                  </h3>
+                  <p style="font-size: 0.9rem">
+                    MSSV: <strong id="profile-student-id">---</strong> • Email:
+                    <span id="profile-email">---</span>
+                  </p>
+                </div>
+              </div>
+              <button class="btn btn-danger" onclick="handleLogout()">
+                🚪 Đăng xuất
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 style="margin-bottom: 14px">🔑 Đổi Mật Khẩu</h3>
+            <form onsubmit="handleChangePassword(event)">
+              <div class="form-group">
+                <label for="old-password">Mật khẩu hiện tại:</label>
+                <input
+                  type="password"
+                  id="old-password"
+                  class="input-control"
+                  required
+                />
+              </div>
+              <div class="grid-2" style="gap: 14px">
+                <div class="form-group">
+                  <label for="new-password">Mật khẩu mới (≥ 6 ký tự):</label>
+                  <input
+                    type="password"
+                    id="new-password"
+                    class="input-control"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="confirm-new-password"
+                    >Nhập lại mật khẩu mới:</label
+                  >
+                  <input
+                    type="password"
+                    id="confirm-new-password"
+                    class="input-control"
+                    required
+                  />
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary">
+                Cập nhật mật khẩu
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-bottom" style="border-top: none; padding-top: 0">
+          <span
+            >© 2026 MathLab Mini — Thực hiện bởi Vũ Huy Hoàng (52.01.104.124)
+            &amp; Hồ Đắc Anh Khoa (52.01.104.042).</span
+          >
+          <a href="index.html" style="color: var(--primary); font-weight: 600"
+            >← Quay về Trang chủ</a
+          >
+        </div>
+      </div>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

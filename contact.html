@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Liên hệ &amp; Hỏi đáp — MathLab Mini</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/responsive.css" />
+  </head>
+  <body>
+    <!-- NAVBAR -->
+    <header class="navbar">
+      <div class="container navbar-inner">
+        <a href="index.html" class="brand">
+          <div class="brand-logo">∑∫</div>
+          <div>MathLab <span>Mini</span></div>
+        </a>
+
+        <nav class="nav-links" id="nav-links">
+          <a href="index.html">Trang chủ</a>
+          <a href="products.html">Chuyên đề &amp; Lab</a>
+          <a href="about.html">Giới thiệu</a>
+          <a href="contact.html">Liên hệ &amp; FAQ</a>
+        </nav>
+
+        <div class="nav-actions">
+          <button
+            class="icon-btn"
+            id="theme-toggle-btn"
+            title="Đổi giao diện Sáng / Tối"
+          >
+            🌙
+          </button>
+          <a href="auth.html" class="btn btn-sm btn-primary" id="nav-auth-btn"
+            >Đăng nhập</a
+          >
+          <button
+            class="icon-btn hamburger"
+            id="hamburger-btn"
+            aria-label="Mở menu"
+          >
+            ☰
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="section">
+      <div class="container">
+        <div class="section-header">
+          <span class="subtitle">Hỗ trợ Học tập</span>
+          <h2>Góp ý Học liệu &amp; Câu hỏi Thường gặp</h2>
+          <p>
+            Gửi đề xuất bổ sung bài tập hoặc xem nhanh hướng dẫn sử dụng các
+            công cụ tính toán trên MathLab Mini.
+          </p>
+        </div>
+
+        <div class="grid-2">
+          <!-- Cột trái: Form Góp ý / Liên hệ có kiểm tra dữ liệu (Validation) -->
+          <div class="card">
+            <h3 style="margin-bottom: 6px">
+              ✉️ Gửi phản hồi / Đề xuất bài tập
+            </h3>
+            <p style="margin-bottom: 20px">
+              Mọi đóng góp giúp hoàn thiện kho bài tập Giải tích 1 &amp; Đại số
+              tuyến tính.
+            </p>
+
+            <form onsubmit="handleContactSubmit(event)">
+              <div class="form-group">
+                <label for="contact-name">Họ và tên của bạn:</label>
+                <input
+                  type="text"
+                  id="contact-name"
+                  class="input-control"
+                  placeholder="Nhập họ tên..."
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="contact-email">Email liên hệ:</label>
+                <input
+                  type="email"
+                  id="contact-email"
+                  class="input-control"
+                  placeholder="email@domain.com"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="contact-topic">Chủ đề quan tâm:</label>
+                <select id="contact-topic" class="select-control">
+                  <option value="Góp ý học liệu">
+                    Đề xuất thêm bài tập / chuyên đề
+                  </option>
+                  <option value="Báo lỗi công thức">
+                    Báo lỗi hiển thị công thức LaTeX
+                  </option>
+                  <option value="Hỗ trợ Phòng Lab">
+                    Hỗ trợ sử dụng Phòng Lab Toán
+                  </option>
+                  <option value="Khác">Vấn đề khác</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="contact-message"
+                  >Nội dung chi tiết (tối thiểu 10 ký tự):</label
+                >
+                <textarea
+                  id="contact-message"
+                  class="textarea-control"
+                  rows="4"
+                  placeholder="Nhập nội dung góp ý hoặc câu hỏi của bạn..."
+                  required
+                ></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary" style="width: 100%">
+                🚀 Gửi phản hồi
+              </button>
+            </form>
+          </div>
+
+          <!-- Cột phải: Danh sách FAQ dạng Accordion đóng/mở -->
+          <div>
+            <h3 style="margin-bottom: 16px">❓ Câu hỏi thường gặp (FAQ)</h3>
+
+            <div
+              class="faq-item open"
+              style="
+                border: 1px solid var(--border-color);
+                border-radius: 12px;
+                background: var(--bg-surface);
+                margin-bottom: 12px;
+                overflow: hidden;
+              "
+            >
+              <button
+                type="button"
+                class="faq-question"
+                onclick="toggleFaq(this)"
+                style="
+                  width: 100%;
+                  padding: 16px 20px;
+                  text-align: left;
+                  background: transparent;
+                  border: none;
+                  color: var(--text-primary);
+                  font-weight: 700;
+                  display: flex;
+                  justify-content: space-between;
+                  cursor: pointer;
+                "
+              >
+                <span
+                  >1. Dữ liệu chuyên đề tôi thêm mới và điểm Quiz được lưu ở
+                  đâu?</span
+                >
+                <span>▼</span>
+              </button>
+              <div
+                style="
+                  padding: 0 20px 16px;
+                  color: var(--text-secondary);
+                  font-size: 0.93rem;
+                "
+              >
+                Toàn bộ chuyên đề mới, nội dung chỉnh sửa, điểm trắc nghiệm Quiz
+                và tài khoản sinh viên đều được lưu trực tiếp trong
+                <code>localStorage</code> của trình duyệt. Bạn có thể bấm nút
+                <strong>"Khôi phục gốc"</strong> bất cứ lúc nào để đưa về 7
+                chương chuẩn ban đầu.
+              </div>
+            </div>
+
+            <div
+              class="faq-item"
+              style="
+                border: 1px solid var(--border-color);
+                border-radius: 12px;
+                background: var(--bg-surface);
+                margin-bottom: 12px;
+                overflow: hidden;
+              "
+            >
+              <button
+                type="button"
+                class="faq-question"
+                onclick="toggleFaq(this)"
+                style="
+                  width: 100%;
+                  padding: 16px 20px;
+                  text-align: left;
+                  background: transparent;
+                  border: none;
+                  color: var(--text-primary);
+                  font-weight: 700;
+                  display: flex;
+                  justify-content: space-between;
+                  cursor: pointer;
+                "
+              >
+                <span
+                  >2. Cách nhập hàm số đúng cú pháp trong Phòng thí nghiệm Giải
+                  tích?</span
+                >
+                <span>▼</span>
+              </button>
+              <div
+                style="
+                  padding: 0 20px 16px;
+                  color: var(--text-secondary);
+                  font-size: 0.93rem;
+                "
+              >
+                Bạn có thể dùng các ký hiệu chuẩn như <code>x^3 - 3*x</code>,
+                <code>sin(x)</code>, <code>cos(x)</code>, <code>exp(x)</code>,
+                <code>ln(x)</code>, <code>sqrt(x)</code>. Hệ thống cũng tự động
+                hiểu cách viết nhân tắt như <code>2x</code> hoặc
+                <code>3(x+1)</code>.
+              </div>
+            </div>
+
+            <div
+              class="faq-item"
+              style="
+                border: 1px solid var(--border-color);
+                border-radius: 12px;
+                background: var(--bg-surface);
+                margin-bottom: 12px;
+                overflow: hidden;
+              "
+            >
+              <button
+                type="button"
+                class="faq-question"
+                onclick="toggleFaq(this)"
+                style="
+                  width: 100%;
+                  padding: 16px 20px;
+                  text-align: left;
+                  background: transparent;
+                  border: none;
+                  color: var(--text-primary);
+                  font-weight: 700;
+                  display: flex;
+                  justify-content: space-between;
+                  cursor: pointer;
+                "
+              >
+                <span
+                  >3. Tại sao ma trận vuông có det(A) = 0 lại không tính được
+                  A⁻¹?</span
+                >
+                <span>▼</span>
+              </button>
+              <div
+                style="
+                  padding: 0 20px 16px;
+                  color: var(--text-secondary);
+                  font-size: 0.93rem;
+                "
+              >
+                Theo định lý Chương 5 (Đại số tuyến tính), ma trận vuông $A$ khả
+                nghịch khi và chỉ khi $\det(A) \neq 0$ (tương đương
+                $\text{rank}(A) = n$). Khi $\det(A) = 0$, ma trận bị suy biến
+                nên không tồn tại ma trận nghịch đảo $A^{-1}$.
+              </div>
+            </div>
+
+            <div
+              class="faq-item"
+              style="
+                border: 1px solid var(--border-color);
+                border-radius: 12px;
+                background: var(--bg-surface);
+                margin-bottom: 12px;
+                overflow: hidden;
+              "
+            >
+              <button
+                type="button"
+                class="faq-question"
+                onclick="toggleFaq(this)"
+                style="
+                  width: 100%;
+                  padding: 16px 20px;
+                  text-align: left;
+                  background: transparent;
+                  border: none;
+                  color: var(--text-primary);
+                  font-weight: 700;
+                  display: flex;
+                  justify-content: space-between;
+                  cursor: pointer;
+                "
+              >
+                <span
+                  >4. Nội dung Đại số tuyến tính trên web bám sát giáo trình
+                  nào?</span
+                >
+                <span>▼</span>
+              </button>
+              <div
+                style="
+                  padding: 0 20px 16px;
+                  color: var(--text-secondary);
+                  font-size: 0.93rem;
+                "
+              >
+                Nội dung được biên soạn bám sát đề cương học phần
+                <strong>Cơ sở toán trong Công nghệ thông tin (COMP1800)</strong>
+                gồm 3 chương trọng tâm: Ma trận &amp; Định thức (Chương 5), Hệ
+                phương trình tuyến tính (Chương 6) và Không gian Vector &amp;
+                Không gian Euclide (Chương 7).
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-bottom" style="border-top: none; padding-top: 0">
+          <span
+            >© 2026 MathLab Mini — Thực hiện bởi Vũ Huy Hoàng (52.01.104.124)
+            &amp; Hồ Đắc Anh Khoa (52.01.104.042).</span
+          >
+          <a href="index.html" style="color: var(--primary); font-weight: 600"
+            >← Quay về Trang chủ</a
+          >
+        </div>
+      </div>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

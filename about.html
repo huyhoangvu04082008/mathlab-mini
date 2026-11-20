@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Giới thiệu Dự án — MathLab Mini</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/responsive.css" />
+  </head>
+  <body>
+    <!-- NAVBAR -->
+    <header class="navbar">
+      <div class="container navbar-inner">
+        <a href="index.html" class="brand">
+          <div class="brand-logo">∑∫</div>
+          <div>MathLab <span>Mini</span></div>
+        </a>
+
+        <nav class="nav-links" id="nav-links">
+          <a href="index.html">Trang chủ</a>
+          <a href="products.html">Chuyên đề &amp; Lab</a>
+          <a href="about.html">Giới thiệu</a>
+          <a href="contact.html">Liên hệ &amp; FAQ</a>
+        </nav>
+
+        <div class="nav-actions">
+          <button
+            class="icon-btn"
+            id="theme-toggle-btn"
+            title="Đổi giao diện Sáng / Tối"
+          >
+            🌙
+          </button>
+          <a href="auth.html" class="btn btn-sm btn-primary" id="nav-auth-btn"
+            >Đăng nhập</a
+          >
+          <button
+            class="icon-btn hamburger"
+            id="hamburger-btn"
+            aria-label="Mở menu"
+          >
+            ☰
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="section">
+        <div class="container">
+          <div class="section-header">
+            <span class="subtitle">Về MathLab Mini</span>
+            <h2>Nền tảng Số hóa Học liệu Toán Cao Cấp</h2>
+            <p>
+              Đồ án học phần Thiết kế Web — Xây dựng môi trường tự học trực quan
+              dành cho sinh viên năm nhất ngành Công nghệ Thông tin.
+            </p>
+          </div>
+
+          <div class="grid-2 reveal" style="margin-bottom: 48px">
+            <div class="card">
+              <span class="badge badge-calc" style="margin-bottom: 12px"
+                >BÀI TOÁN THỰC TIỄN</span
+              >
+              <h3>Tại sao xây dựng MathLab Mini?</h3>
+              <p style="margin-bottom: 12px">
+                Sinh viên năm nhất CNTT thường gặp khó khăn khi tiếp cận đồng
+                thời hai học phần nền tảng là <strong>Giải tích 1</strong> và
+                <strong>Đại số tuyến tính (COMP1800)</strong> do khối lượng định
+                lý lớn và tính trừu tượng cao (như không gian vector
+                $\mathbb{R}^n$, khai triển Taylor hay định lý
+                Kronecker-Capelli).
+              </p>
+              <p>
+                <strong>MathLab Mini</strong> giải quyết vấn đề này bằng cách
+                gom gọn công thức trọng tâm, phân loại bài tập tự luận kèm lời
+                giải chi tiết và tích hợp bộ công cụ tính toán trực quan ngay
+                trên trình duyệt mà không cần cài đặt phần mềm nặng.
+              </p>
+            </div>
+
+            <div class="card">
+              <span class="badge badge-linalg" style="margin-bottom: 12px"
+                >KIẾN TRÚC KỸ THUẬT</span
+              >
+              <h3>Công nghệ triển khai 100% Client-Side</h3>
+              <ul
+                style="
+                  color: var(--text-secondary);
+                  font-size: 0.94rem;
+                  line-height: 1.9;
+                "
+              >
+                <li>
+                  ✅ <strong>HTML5 Semantic:</strong> Cấu trúc chuẩn SEO, hỗ trợ
+                  truy cập đa thiết bị.
+                </li>
+                <li>
+                  ✅ <strong>CSS3 Hiện đại:</strong> Biến màu CSS Variables
+                  (Dark/Light Mode), Flexbox, CSS Grid và Keyframes Animation.
+                </li>
+                <li>
+                  ✅ <strong>JavaScript ES6+:</strong> Xử lý thuật toán khử
+                  Gauss-Jordan, phương pháp tích phân Simpson và quản lý CRUD
+                  qua <code>localStorage</code>.
+                </li>
+                <li>
+                  ✅ <strong>HTML5 Canvas &amp; KaTeX:</strong> Vẽ đồ thị hàm số
+                  theo thời gian thực và hiển thị công thức Toán chuẩn xác.
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div
+            class="card reveal"
+            style="text-align: center; max-width: 820px; margin: 0 auto"
+          >
+            <span class="badge badge-easy" style="margin-bottom: 12px"
+              >NHÓM SINH VIÊN THỰC HIỆN ĐỀ TÀI</span
+            >
+            <h3 style="margin-bottom: 16px">
+              Khoa Công nghệ Thông tin — Trường ĐH Sư phạm TP.HCM (HCMUE)
+            </h3>
+            <div
+              class="grid-2"
+              style="gap: 16px; text-align: left; margin-bottom: 22px"
+            >
+              <div
+                style="
+                  padding: 16px 18px;
+                  border-radius: 12px;
+                  background: var(--bg-surface-alt);
+                  border: 1px solid var(--border-color);
+                "
+              >
+                <div
+                  style="
+                    font-weight: 800;
+                    font-size: 1.05rem;
+                    color: var(--primary);
+                  "
+                >
+                  👨‍💻 Vũ Huy Hoàng
+                </div>
+                <div
+                  style="
+                    font-family: var(--font-mono);
+                    font-size: 0.9rem;
+                    color: var(--text-secondary);
+                    margin-top: 4px;
+                  "
+                >
+                  MSSV: 52.01.104.124
+                </div>
+              </div>
+              <div
+                style="
+                  padding: 16px 18px;
+                  border-radius: 12px;
+                  background: var(--bg-surface-alt);
+                  border: 1px solid var(--border-color);
+                "
+              >
+                <div
+                  style="
+                    font-weight: 800;
+                    font-size: 1.05rem;
+                    color: var(--secondary);
+                  "
+                >
+                  👨‍💻 Hồ Đắc Anh Khoa
+                </div>
+                <div
+                  style="
+                    font-family: var(--font-mono);
+                    font-size: 0.9rem;
+                    color: var(--text-secondary);
+                    margin-top: 4px;
+                  "
+                >
+                  MSSV: 52.01.104.042
+                </div>
+              </div>
+            </div>
+            <a href="products.html" class="btn btn-primary"
+              >Trải nghiệm ngay các chuyên đề →</a
+            >
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-bottom" style="border-top: none; padding-top: 0">
+          <span
+            >© 2026 MathLab Mini — Thực hiện bởi Vũ Huy Hoàng (52.01.104.124)
+            &amp; Hồ Đắc Anh Khoa (52.01.104.042).</span
+          >
+          <a href="index.html" style="color: var(--primary); font-weight: 600"
+            >← Quay về Trang chủ</a
+          >
+        </div>
+      </div>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

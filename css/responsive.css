@@ -1,0 +1,95 @@
+/* ==========================================================================
+   FILE: css/responsive.css
+   MÔ TẢ: Tinh chỉnh giao diện đa thiết bị (Responsive Web Design)
+   ========================================================================== */
+
+/* Màn hình Laptop nhỏ (< 1200px) */
+@media (max-width: 1199px) {
+  .hero h1 {
+    font-size: 2.3rem;
+  }
+  .grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Màn hình Tablet ngang & dọc (< 992px) */
+@media (max-width: 991px) {
+  .hero-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .lab-grid {
+    grid-template-columns: 1fr;
+  }
+  .grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .footer-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Màn hình Mobile lớn (< 768px): Chuyển thanh menu ngang thành menu trượt (Hamburger) */
+@media (max-width: 767px) {
+  .hamburger {
+    display: inline-flex;
+  }
+
+  .nav-links {
+    position: fixed;
+    top: 72px;
+    left: 0;
+    right: 0;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-color);
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px 24px 24px;
+    gap: 8px;
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-130%);
+    opacity: 0;
+    pointer-events: none;
+    transition: var(--transition);
+  }
+
+  .nav-links.open {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .hero {
+    padding: 44px 0 52px;
+  }
+  .hero h1 {
+    font-size: 1.9rem;
+  }
+  .grid-3,
+  .grid-2,
+  .grid-4 {
+    grid-template-columns: 1fr;
+  }
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* Màn hình Mobile nhỏ (< 576px) */
+@media (max-width: 575px) {
+  .container {
+    padding: 0 16px;
+  }
+  .hero-stats {
+    grid-template-columns: 1fr;
+  }
+  .footer-grid {
+    grid-template-columns: 1fr;
+  }
+  .matrix-cell {
+    width: 50px;
+    font-size: 0.84rem;
+  }
+}
