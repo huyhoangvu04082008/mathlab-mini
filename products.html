@@ -3,7 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chuyên đề &amp; Phòng Lab Toán — MathLab Mini</title>
+    <title>Chuyên đề, Phòng Lab &amp; Phòng Thi — MathLab Mini</title>
+
+    <!-- Favicon SVG HCMUE x MathLab -->
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%231d4ed8'/%3E%3Cstop offset='100%25' stop-color='%230d9488'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Ccircle cx='32' cy='32' r='24' fill='none' stroke='%23ffffff' stroke-opacity='0.35' stroke-width='2'/%3E%3Ctext x='32' y='39' text-anchor='middle' fill='%23ffffff' font-family='Georgia,serif' font-weight='bold' font-size='24'%3E%E2%88%AB%E2%88%91%3C/text%3E%3C/svg%3E"
+    />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -28,19 +35,98 @@
 
     <link rel="stylesheet" href="css/style.css" />
     <link rel="stylesheet" href="css/responsive.css" />
+    <link rel="stylesheet" href="css/mathlab-upgrade.css" />
   </head>
   <body>
     <!-- NAVBAR -->
     <header class="navbar">
       <div class="container navbar-inner">
         <a href="index.html" class="brand">
-          <div class="brand-logo">∑∫</div>
-          <div>MathLab <span>Mini</span></div>
+          <div class="brand-svg-wrap" aria-hidden="true">
+            <svg width="42" height="42" viewBox="0 0 64 64" fill="none">
+              <defs>
+                <linearGradient
+                  id="hcmueGrad"
+                  x1="0"
+                  y1="0"
+                  x2="64"
+                  y2="64"
+                  gradientUnits="userSpaceOnUse"
+                >
+                  <stop offset="0%" stop-color="#1e40af" />
+                  <stop offset="55%" stop-color="#2563eb" />
+                  <stop offset="100%" stop-color="#0d9488" />
+                </linearGradient>
+              </defs>
+              <rect width="64" height="64" rx="14" fill="url(#hcmueGrad)" />
+              <circle
+                cx="32"
+                cy="32"
+                r="24"
+                stroke="#ffffff"
+                stroke-opacity="0.32"
+                stroke-width="1.8"
+                stroke-dasharray="4 2"
+              />
+              <path
+                d="M16 44L32 16L48 44H16Z"
+                stroke="#93c5fd"
+                stroke-opacity="0.45"
+                stroke-width="1.5"
+              />
+              <text
+                x="32"
+                y="38"
+                text-anchor="middle"
+                fill="#ffffff"
+                font-family="Georgia, serif"
+                font-weight="700"
+                font-size="21"
+              >
+                ∫∑x
+              </text>
+              <rect
+                x="13"
+                y="47"
+                width="38"
+                height="11"
+                rx="5.5"
+                fill="#0f172a"
+                fill-opacity="0.72"
+              />
+              <text
+                x="32"
+                y="55"
+                text-anchor="middle"
+                fill="#e0f2fe"
+                font-family="Plus Jakarta Sans, sans-serif"
+                font-weight="800"
+                font-size="7.5"
+                letter-spacing="0.8"
+              >
+                HCMUE
+              </text>
+            </svg>
+          </div>
+          <div>
+            MathLab <span>Mini</span>
+            <div
+              style="
+                font-size: 0.68rem;
+                font-weight: 700;
+                color: var(--text-muted);
+                line-height: 1;
+                margin-top: 2px;
+              "
+            >
+              KHOA CNTT • ĐHSP TP.HCM
+            </div>
+          </div>
         </a>
 
         <nav class="nav-links" id="nav-links">
           <a href="index.html">Trang chủ</a>
-          <a href="products.html">Chuyên đề &amp; Lab</a>
+          <a href="products.html" class="active">Chuyên đề &amp; Lab</a>
           <a href="about.html">Giới thiệu</a>
           <a href="contact.html">Liên hệ &amp; FAQ</a>
         </nav>
@@ -70,25 +156,25 @@
     <main class="section">
       <div class="container">
         <div class="section-header" style="margin-bottom: 32px">
-          <span class="subtitle">Thư viện Học liệu &amp; Thực hành</span>
+          <span class="subtitle">Thư viện Học liệu &amp; Thực hành HCMUE</span>
           <h2>Danh mục 7 Chuyên đề Toán Cao Cấp</h2>
           <p>
-            Tìm kiếm, lọc theo học phần, học lý thuyết, giải bài tập hoặc tự tạo
-            thêm chuyên đề ghi chú của riêng bạn.
+            Đầy đủ 7 chương chuẩn slide bài giảng Giải tích 1 &amp; Cơ sở Toán
+            CNTT, tích hợp Phòng Thi Bấm Giờ và AI Chấm Tự Luận qua ảnh chụp.
           </p>
         </div>
 
         <!-- Thanh hiển thị Kinh nghiệm XP & Thống kê ôn tập thích ứng -->
         <div class="xp-banner" id="xp-progress-banner"></div>
-        
-        <!-- THANH CÔNG CỤ TÌM KIẾM, LỌC, SẮP XẾP & THÊM CHUYÊN ĐỀ -->
+
+        <!-- THANH CÔNG CỤ TÌM KIẾM, LỌC, SẮP XẾP & PHÒNG THI -->
         <div class="toolbar">
           <div class="toolbar-group" style="flex: 1">
             <input
               type="text"
               id="search-topic"
               class="input-control"
-              placeholder="🔍 Tìm tên chương, từ khóa (VD: Taylor, Gauss, Euclide)..."
+              placeholder="🔍 Tìm tên chương, từ khóa (VD: Taylor, Chuỗi, Gauss, Euclide)..."
               oninput="renderTopicsGrid()"
               style="min-width: 240px"
             />
@@ -126,12 +212,21 @@
 
           <div class="toolbar-group">
             <button
+              type="button"
+              class="btn btn-sm btn-secondary"
+              onclick="openExamHubModal('midterm-1')"
+            >
+              ⏱️ Phòng Thi &amp; AI Chấm Ảnh
+            </button>
+            <button
+              type="button"
               class="btn btn-sm btn-primary"
               onclick="openTopicFormModal()"
             >
               ➕ Thêm chuyên đề
             </button>
             <button
+              type="button"
               class="btn btn-sm btn-outline"
               onclick="resetDefaultTopics()"
               title="Khôi phục dữ liệu mặc định"
@@ -163,8 +258,8 @@
         <div class="grid-3" id="topics-grid"></div>
 
         <!-- =====================================================================
-           PHÒNG THÍ NGHIỆM TOÁN TƯƠNG TÁC (INTERACTIVE MATH LAB)
-           ===================================================================== -->
+             PHÒNG THÍ NGHIỆM TOÁN TƯƠNG TÁC (INTERACTIVE MATH LAB)
+             ===================================================================== -->
         <section id="math-lab" class="lab-wrapper">
           <div
             style="
@@ -179,41 +274,188 @@
               🧪 Phòng Thí Nghiệm Toán Trực Quan
             </h2>
             <p style="color: var(--text-secondary); font-size: 0.95rem">
-              Thực hành khảo sát hàm số, tính đạo hàm/tích phân số và giải bài
-              toán Đại số tuyến tính ngay lập tức.
+              Thực hành khảo sát hàm số, tiếp tuyến, tích phân, khai triển
+              Taylor–Maclaurin và giải bài toán Ma trận – Hệ PTTT ngay lập tức.
             </p>
           </div>
 
-          <!-- Các Tab chuyển đổi công cụ -->
           <div class="lab-tabs">
             <button
               class="lab-tab active"
               onclick="switchLabTab('lab-calc', this)"
             >
-              📈 1. Đồ thị, Tiếp tuyến &amp; Tích phân
+              📈 1. Đồ thị, Tiếp tuyến, Tích phân &amp; Taylor
             </button>
             <button class="lab-tab" onclick="switchLabTab('lab-matrix', this)">
-              🔢 2. Phân tích Ma trận (det, rank, A⁻¹)
+              🔢 2. Phân tích Ma trận (det, rank, REF, A⁻¹)
             </button>
             <button class="lab-tab" onclick="switchLabTab('lab-system', this)">
               ⚖️ 3. Giải Hệ phương trình AX = b
             </button>
           </div>
 
-          <!-- PANEL 1: GIẢI TÍCH (CANVAS) -->
+          <!-- PANEL 1: GIẢI TÍCH (CANVAS TƯƠNG TÁC KIỂU GEOGEBRA & BỘ GÕ LATEX) -->
           <div class="lab-panel active" id="lab-calc">
             <div class="lab-grid">
               <div>
-                <div class="form-group">
-                  <label for="calc-func">Hàm số y = f(x):</label>
+                <div class="form-group" style="margin-bottom: 10px">
+                  <label for="calc-func">
+                    Hàm số y = f(x)
+                    <span
+                      style="
+                        font-weight: 500;
+                        font-size: 0.78rem;
+                        color: var(--text-muted);
+                      "
+                    >
+                      (hỗ trợ cả cú pháp chuẩn &amp; LaTeX) </span
+                    >:
+                  </label>
                   <input
                     type="text"
                     id="calc-func"
                     class="input-control"
+                    style="font-family: var(--font-mono); font-size: 0.92rem"
                     value="x^3 - 3*x"
+                    placeholder="VD: x^3 - 3*x hoặc \frac{\sin(x)}{x^2 + 1}"
+                    oninput="onCalcFuncInput()"
                   />
+
+                  <!-- Bàn phím chèn nhanh công thức LaTeX trực quan -->
+                  <div
+                    id="calc-latex-keypad"
+                    style="
+                      display: flex;
+                      flex-wrap: wrap;
+                      gap: 5px;
+                      margin-top: 8px;
+                      padding: 8px;
+                      border-radius: 10px;
+                      background: var(--bg-surface-alt);
+                      border: 1px solid var(--border-color);
+                    "
+                  >
+                    <button
+                      type="button"
+                      class="latex-sym-btn"
+                      title="Phân số \frac{a}{b}"
+                      onclick="insertCalcLatex('\\frac{}{}', 3)"
+                    >
+                      a/b
+                    </button>
+                    <button
+                      type="button"
+                      class="latex-sym-btn"
+                      title="Căn bậc hai \sqrt{x}"
+                      onclick="insertCalcLatex('\\sqrt{}', 1)"
+                    >
+                      √
+                    </button>
+                    <button
+                      type="button"
+                      class="latex-sym-btn"
+                      title="Lũy thừa x^{n}"
+                      onclick="insertCalcLatex('^{}', 1)"
+                    >
+                      xⁿ
+                    </button>
+                    <button
+                      type="button"
+                      class="latex-sym-btn"
+                      title="Trị tuyệt đối |x|"
+                      onclick="insertCalcLatex('|x|', 0)"
+                    >
+                      |x|
+                    </button>
+                    <button
+                      type="button"
+                      class="latex-sym-btn"
+                      title="Hàm sin"
+                      onclick="insertCalcLatex('\\sin(x)', 0)"
+                    >
+                      sin
+                    </button>
+                    <button
+                      type="button"
+                      class="latex-sym-btn"
+                      title="Hàm cos"
+                      onclick="insertCalcLatex('\\cos(x)', 0)"
+                    >
+                      cos
+                    </button>
+                    <button
+                      type="button"
+                      class="latex-sym-btn"
+                      title="Hàm tan"
+                      onclick="insertCalcLatex('\\tan(x)', 0)"
+                    >
+                      tan
+                    </button>
+                    <button
+                      type="button"
+                      class="latex-sym-btn"
+                      title="Hàm mũ e^{x}"
+                      onclick="insertCalcLatex('e^{x}', 0)"
+                    >
+                      eˣ
+                    </button>
+                    <button
+                      type="button"
+                      class="latex-sym-btn"
+                      title="Logarit tự nhiên \ln(x)"
+                      onclick="insertCalcLatex('\\ln(x)', 0)"
+                    >
+                      ln
+                    </button>
+                    <button
+                      type="button"
+                      class="latex-sym-btn"
+                      title="Hằng số Pi"
+                      onclick="insertCalcLatex('\\pi', 0)"
+                    >
+                      π
+                    </button>
+                  </div>
+
+                  <!-- Ô xem trước công thức KaTeX sống động -->
+                  <div
+                    style="
+                      margin-top: 8px;
+                      padding: 8px 12px;
+                      border-radius: 9px;
+                      background: var(--bg-surface-alt);
+                      border: 1px dashed var(--border-color);
+                      display: flex;
+                      align-items: center;
+                      justify-content: space-between;
+                      gap: 8px;
+                      overflow-x: auto;
+                    "
+                  >
+                    <span
+                      style="
+                        font-size: 0.74rem;
+                        font-weight: 700;
+                        color: var(--text-muted);
+                        white-space: nowrap;
+                      "
+                    >
+                      Hiển thị toán học:
+                    </span>
+                    <div
+                      id="calc-latex-preview"
+                      style="
+                        font-size: 0.98rem;
+                        color: var(--primary);
+                        font-weight: 600;
+                      "
+                    >
+                      $y = x^3 - 3x$
+                    </div>
+                  </div>
                 </div>
-                <div class="grid-3" style="gap: 10px; margin-bottom: 16px">
+
+                <div class="grid-3" style="gap: 10px; margin-bottom: 14px">
                   <div class="form-group" style="margin-bottom: 0">
                     <label for="calc-x0">Tiếp điểm x₀:</label>
                     <input
@@ -222,6 +464,7 @@
                       id="calc-x0"
                       class="input-control"
                       value="1"
+                      oninput="runCalculusLab()"
                     />
                   </div>
                   <div class="form-group" style="margin-bottom: 0">
@@ -232,6 +475,7 @@
                       id="calc-a"
                       class="input-control"
                       value="0"
+                      oninput="runCalculusLab()"
                     />
                   </div>
                   <div class="form-group" style="margin-bottom: 0">
@@ -242,6 +486,7 @@
                       id="calc-b"
                       class="input-control"
                       value="2"
+                      oninput="runCalculusLab()"
                     />
                   </div>
                 </div>
@@ -262,40 +507,202 @@
                     color: var(--text-secondary);
                   "
                 >
-                  Hàm mẫu nhanh:
+                  Hàm mẫu nhanh (chuẩn &amp; LaTeX):
                 </div>
-                <div style="display: flex; flex-wrap: wrap; gap: 6px">
+                <div
+                  style="
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 6px;
+                    margin-bottom: 14px;
+                  "
+                >
                   <button
+                    type="button"
                     class="btn btn-sm btn-outline"
                     onclick="setCalcPreset('x^3 - 3*x', 1, 0, 2)"
                   >
                     x³ - 3x
                   </button>
                   <button
+                    type="button"
                     class="btn btn-sm btn-outline"
-                    onclick="setCalcPreset('sin(x) + 0.5*x', 0, 0, 3.14)"
+                    onclick="
+                      setCalcPreset('\\frac{\\sin(x)}{x}', 1, 0.1, 3.14159)
+                    "
                   >
-                    sin(x) + 0.5x
+                    sin(x)/x
                   </button>
                   <button
+                    type="button"
                     class="btn btn-sm btn-outline"
-                    onclick="setCalcPreset('exp(-0.4*x)*cos(2*x)', 0.5, 0, 3)"
+                    onclick="setCalcPreset('e^{-0.4x}\\cos(2x)', 0.5, 0, 3)"
                   >
                     e⁻⁰·⁴ˣcos(2x)
                   </button>
                   <button
+                    type="button"
                     class="btn btn-sm btn-outline"
-                    onclick="setCalcPreset('4 - x^2', 1, -2, 2)"
+                    onclick="setCalcPreset('\\sqrt{4 - x^2}', 1, -2, 2)"
                   >
-                    4 - x²
+                    √(4 - x²)
                   </button>
                 </div>
+
+                <!-- Khu vực điều khiển mô phỏng Taylor-Maclaurin -->
+                <div id="taylor-controls-slot"></div>
               </div>
 
               <div>
-                <div class="canvas-box" style="margin-bottom: 16px">
-                  <canvas id="calc-canvas" width="640" height="360"></canvas>
+                <!-- Thanh công cụ kiểu GeoGebra phía trên đồ thị -->
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                    margin-bottom: 10px;
+                    padding: 8px 12px;
+                    border-radius: 10px;
+                    background: var(--bg-surface-alt);
+                    border: 1px solid var(--border-color);
+                  "
+                >
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap">
+                    <button
+                      type="button"
+                      id="btn-mode-canvas"
+                      class="btn btn-sm btn-primary"
+                      onclick="switchCalcViewMode('canvas')"
+                    >
+                      📐 Canvas Tương Tác
+                    </button>
+                    <button
+                      type="button"
+                      id="btn-mode-geogebra"
+                      class="btn btn-sm btn-outline"
+                      onclick="switchCalcViewMode('geogebra')"
+                    >
+                      🌐 GeoGebra Nhúng
+                    </button>
+                  </div>
+
+                  <div
+                    id="canvas-geogebra-controls"
+                    style="
+                      display: flex;
+                      gap: 5px;
+                      flex-wrap: wrap;
+                      align-items: center;
+                    "
+                  >
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline"
+                      title="Phóng to (Zoom In)"
+                      onclick="zoomCalculusLab(1.25)"
+                    >
+                      ➕
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline"
+                      title="Thu nhỏ (Zoom Out)"
+                      onclick="zoomCalculusLab(0.8)"
+                    >
+                      ➖
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline"
+                      title="Đặt lại góc nhìn về gốc O"
+                      onclick="resetCalculusViewport()"
+                    >
+                      🎯 Về gốc O
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline"
+                      title="Tải ảnh đồ thị PNG"
+                      onclick="exportCalculusPNG()"
+                    >
+                      📸 PNG
+                    </button>
+                    <a
+                      href="https://www.geogebra.org/calculator"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="btn btn-sm btn-secondary"
+                      title="Mở toàn màn hình trên GeoGebra.org"
+                      style="text-decoration: none"
+                    >
+                      ↗ GeoGebra.org
+                    </a>
+                  </div>
                 </div>
+
+                <!-- Chế độ 1: Canvas tương tác kiểu GeoGebra -->
+                <div
+                  id="calc-canvas-wrapper"
+                  class="canvas-box"
+                  style="margin-bottom: 16px; position: relative"
+                >
+                  <canvas
+                    id="calc-canvas"
+                    width="640"
+                    height="390"
+                    style="cursor: grab; touch-action: none"
+                  ></canvas>
+                  <div
+                    style="
+                      margin-top: 8px;
+                      font-size: 0.78rem;
+                      color: #94a3b8;
+                      display: flex;
+                      justify-content: space-between;
+                      flex-wrap: wrap;
+                      gap: 6px;
+                    "
+                  >
+                    <span
+                      >🖱️ Lăn chuột: Zoom tại điểm trỏ • Kéo nền: Di chuyển trục
+                      • Kéo chấm xanh: Trượt tiếp điểm x₀</span
+                    >
+                    <span
+                      id="calc-zoom-badge"
+                      style="font-family: var(--font-mono); color: #38bdf8"
+                      >Zoom: 100%</span
+                    >
+                  </div>
+                </div>
+
+                <!-- Chế độ 2: GeoGebra Graphing Calculator nhúng trực tiếp -->
+                <div
+                  id="geogebra-embed-wrapper"
+                  style="
+                    display: none;
+                    margin-bottom: 16px;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    border: 1px solid var(--border-color);
+                    background: var(--bg-surface-alt);
+                  "
+                >
+                  <iframe
+                    id="geogebra-iframe"
+                    data-src="https://www.geogebra.org/calculator?embed"
+                    title="GeoGebra Graphing Calculator"
+                    style="
+                      width: 100%;
+                      height: 460px;
+                      border: 0;
+                      display: block;
+                    "
+                    allowfullscreen
+                  ></iframe>
+                </div>
+
                 <div class="output-console" id="calc-output"></div>
               </div>
             </div>
@@ -306,7 +713,9 @@
             <div class="lab-grid">
               <div>
                 <div class="form-group">
-                  <label for="matrix-size">Chọn cấp ma trận vuông A:</label>
+                  <label for="matrix-size"
+                    >Chọn kích thước ma trận A (m × n):</label
+                  >
                   <select
                     id="matrix-size"
                     class="select-control"
@@ -315,21 +724,31 @@
                       analyzeMatrix();
                     "
                   >
-                    <option value="2">Ma trận vuông cấp 2 (2 × 2)</option>
-                    <option value="3" selected>
+                    <option value="2x2">Ma trận vuông cấp 2 (2 × 2)</option>
+                    <option value="3x3" selected>
                       Ma trận vuông cấp 3 (3 × 3)
                     </option>
+                    <option value="4x4">Ma trận vuông cấp 4 (4 × 4)</option>
+                    <option value="5x5">Ma trận vuông cấp 5 (5 × 5)</option>
+                    <option value="2x3">Ma trận chữ nhật (2 × 3)</option>
+                    <option value="3x4">Ma trận chữ nhật (3 × 4)</option>
+                    <option value="3x2">Ma trận chữ nhật (3 × 2)</option>
+                    <option value="4x3">Ma trận chữ nhật (4 × 3)</option>
                   </select>
                 </div>
+
+                <div id="matrix-custom-controls"></div>
+
                 <div style="margin-bottom: 18px; overflow-x: auto">
                   <div class="matrix-grid" id="matrix-input-grid"></div>
                 </div>
                 <button
+                  type="button"
                   class="btn btn-secondary"
                   style="width: 100%"
                   onclick="analyzeMatrix()"
                 >
-                  ⚡ Tính det(A), rank(A), Aᵀ &amp; A⁻¹
+                  ⚡ Tính det(A), rank(A), REF, Aᵀ &amp; A⁻¹
                 </button>
               </div>
               <div class="output-console" id="matrix-output"></div>
@@ -341,7 +760,9 @@
             <div class="lab-grid">
               <div>
                 <div class="form-group">
-                  <label for="sys-size">Chọn số ẩn của hệ AX = b:</label>
+                  <label for="sys-size"
+                    >Chọn kích thước hệ AX = b (m PT, n ẩn):</label
+                  >
                   <select
                     id="sys-size"
                     class="select-control"
@@ -350,12 +771,21 @@
                       solveLinearSystem();
                     "
                   >
-                    <option value="2">Hệ 2 phương trình, 2 ẩn (x, y)</option>
-                    <option value="3" selected>
-                      Hệ 3 phương trình, 3 ẩn (x, y, z)
+                    <option value="2x2">Hệ vuông 2 PT • 2 ẩn (x₁, x₂)</option>
+                    <option value="3x3" selected>
+                      Hệ vuông 3 PT • 3 ẩn (x₁, x₂, x₃)
                     </option>
+                    <option value="4x4">Hệ vuông 4 PT • 4 ẩn (x₁..x₄)</option>
+                    <option value="2x3">Hệ 2 PT • 3 ẩn (dưới xác định)</option>
+                    <option value="2x4">Hệ 2 PT • 4 ẩn (nhiều ẩn tự do)</option>
+                    <option value="3x4">Hệ 3 PT • 4 ẩn (nhiều ẩn tự do)</option>
+                    <option value="3x2">Hệ 3 PT • 2 ẩn (quá xác định)</option>
+                    <option value="4x3">Hệ 4 PT • 3 ẩn (quá xác định)</option>
                   </select>
                 </div>
+
+                <div id="sys-preset-controls" style="margin-bottom: 10px"></div>
+
                 <p
                   style="
                     font-size: 0.84rem;
@@ -363,12 +793,14 @@
                     margin-bottom: 10px;
                   "
                 >
-                  Nhập ma trận mở rộng [A | b] (cột cuối cùng là vế phải b):
+                  Nhập ma trận mở rộng [A | b] (cột cuối bên phải là vectơ vế
+                  phải b):
                 </p>
                 <div style="margin-bottom: 18px; overflow-x: auto">
                   <div class="matrix-grid" id="sys-input-grid"></div>
                 </div>
                 <button
+                  type="button"
                   class="btn btn-primary"
                   style="width: 100%"
                   onclick="solveLinearSystem()"
@@ -381,61 +813,111 @@
           </div>
         </section>
       </div>
+
+      <!-- KHU VỰC ĐÓNG GÓP & TỰ ĐỘNG NÂNG CẤP NGUỒN HỌC LIỆU -->
+      <div
+        class="container"
+        id="community-contribute-hub"
+        style="margin-top: 56px"
+      ></div>
+
+      <!-- BẢNG XẾP HẠNG & DIỄN ĐÀN THẢO LUẬN -->
+      <div
+        class="container"
+        id="community-hub"
+        style="margin-top: 44px; margin-bottom: 24px"
+      ></div>
     </main>
 
-    <!-- MODAL 1: HỌC LÝ THUYẾT, BÀI TẬP & QUIZ -->
-    <div class="modal-backdrop" id="study-modal">
+    <!-- MODAL 1: KHÔNG GIAN HỌC TẬP & PHÒNG THI TOÀN MÀN HÌNH -->
+    <div class="modal-backdrop modal-fullscreen" id="study-modal">
       <div class="modal-box">
         <div class="modal-header">
-          <div>
+          <div style="min-width: 0; flex: 1">
             <div
               id="study-modal-code"
-              style="font-size: 0.8rem; font-weight: 700; color: var(--primary)"
+              style="
+                font-size: 0.82rem;
+                font-weight: 800;
+                color: var(--primary);
+                letter-spacing: 0.03em;
+              "
             ></div>
-            <h3 id="study-modal-title" style="font-size: 1.25rem">
+            <h3
+              id="study-modal-title"
+              style="font-size: 1.35rem; margin-top: 2px"
+            >
               Tên chuyên đề
             </h3>
           </div>
-          <button class="icon-btn" onclick="closeModal('study-modal')">
-            ✕
-          </button>
-        </div>
-        <div class="modal-body">
           <div
             style="
               display: flex;
-              gap: 8px;
-              margin-bottom: 20px;
+              align-items: center;
+              gap: 10px;
               flex-wrap: wrap;
             "
           >
             <button
+              type="button"
               class="btn btn-sm btn-primary"
-              data-study-tab="theory"
-              onclick="switchStudyTab('theory')"
+              data-study-tab="lesson"
+              onclick="switchStudyTab('lesson')"
             >
-              📖 Lý thuyết &amp; Công thức
+              📖 Lý thuyết, Ví dụ &amp; Tổng hợp
             </button>
             <button
-              class="btn btn-sm btn-outline"
-              data-study-tab="exercises"
-              onclick="switchStudyTab('exercises')"
-            >
-              ✍️ Bài tập tự luận
-            </button>
-            <button
+              type="button"
               class="btn btn-sm btn-outline"
               data-study-tab="quiz"
               onclick="switchStudyTab('quiz')"
             >
-              🎯 Trắc nghiệm Quiz
+              🎯 Quiz Thích ứng &amp; XP
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline"
+              data-study-tab="exam"
+              onclick="switchStudyTab('exam')"
+            >
+              ⏱️ Phòng Thi &amp; AI Chấm Ảnh
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline"
+              id="study-wide-toggle-btn"
+              onclick="toggleStudyWideMode()"
+              title="Chuyển đổi độ rộng khung đọc"
+            >
+              🖥️ Mở rộng tối đa
+            </button>
+            <button
+              type="button"
+              class="icon-btn"
+              onclick="closeModal('study-modal')"
+              title="Đóng cửa sổ (Esc)"
+            >
+              ✕
             </button>
           </div>
+        </div>
+        <div class="modal-body" id="study-modal-body-wrapper">
           <div id="study-modal-body"></div>
         </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline" onclick="closeModal('study-modal')">
-            Đóng cửa sổ
+        <div class="modal-footer" style="justify-content: space-between">
+          <button
+            type="button"
+            class="btn btn-sm btn-outline"
+            onclick="scrollStudyModalTop()"
+          >
+            ⬆️ Lên đầu bài học
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            onclick="closeModal('study-modal')"
+          >
+            ✕ Đóng phòng học
           </button>
         </div>
       </div>
@@ -538,7 +1020,33 @@
         <div class="footer-grid">
           <div>
             <a href="index.html" class="brand" style="margin-bottom: 12px">
-              <div class="brand-logo">∑∫</div>
+              <div class="brand-svg-wrap" aria-hidden="true">
+                <svg width="38" height="38" viewBox="0 0 64 64" fill="none">
+                  <rect width="64" height="64" rx="14" fill="url(#hcmueGrad)" />
+                  <text
+                    x="32"
+                    y="38"
+                    text-anchor="middle"
+                    fill="#ffffff"
+                    font-family="Georgia, serif"
+                    font-weight="700"
+                    font-size="21"
+                  >
+                    ∫∑x
+                  </text>
+                  <text
+                    x="32"
+                    y="54"
+                    text-anchor="middle"
+                    fill="#e0f2fe"
+                    font-family="Plus Jakarta Sans, sans-serif"
+                    font-weight="800"
+                    font-size="8"
+                  >
+                    HCMUE
+                  </text>
+                </svg>
+              </div>
               <div>MathLab <span>Mini</span></div>
             </a>
             <p style="font-size: 0.9rem; color: var(--text-secondary)">
@@ -565,7 +1073,13 @@
               <li>
                 <a href="products.html#math-lab">Đồ thị &amp; Tích phân số</a>
               </li>
-              <li><a href="products.html#math-lab">Khử Gauss Ma trận</a></li>
+              <li>
+                <a
+                  href="javascript:void(0)"
+                  onclick="openExamHubModal('midterm-1')"
+                  >Phòng Thi Bấm Giờ &amp; AI Chấm Ảnh</a
+                >
+              </li>
             </ul>
           </div>
           <div>
@@ -587,7 +1101,6 @@
       </div>
     </footer>
 
-    <!-- Script chuyển Tab trong Phòng thí nghiệm Toán -->
     <script>
       function switchLabTab(panelId, btnEl) {
         document
@@ -601,8 +1114,14 @@
         if (btnEl) btnEl.classList.add("active");
       }
     </script>
+
+    <script src="js/data-gt1.js"></script>
+    <script src="js/data-dstt.js"></script>
+    <script src="js/data-trr.js"></script>
     <script src="js/data.js"></script>
+    <script src="js/gemini-ai.js"></script>
     <script src="js/math-tools.js"></script>
     <script src="js/main.js"></script>
+    <script src="js/mathlab-upgrade.js"></script>
   </body>
 </html>

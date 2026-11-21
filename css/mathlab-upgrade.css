@@ -1,0 +1,194 @@
+/* ================= 1. FIX KHUNG DIỄN ĐÀN & BỘ GÕ LATEX ================= */
+.forum-composer-upgraded,
+#forum-form,
+.forum-form {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  width: 100% !important;
+}
+
+.forum-form-row {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  width: 100% !important;
+}
+
+.latex-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-surface-alt, #f8fafc);
+  color: var(--text-primary, #0f172a);
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.latex-toolbar-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  padding-bottom: 8px;
+}
+
+.latex-tab-btn {
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #475569);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.latex-tab-btn.active {
+  background: var(--primary, #2563eb);
+  color: #ffffff;
+  border-color: var(--primary, #2563eb);
+}
+
+.latex-symbols-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.latex-sym-btn {
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 13px;
+  color: var(--text-primary, #0f172a);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.latex-sym-btn:hover {
+  background: var(--primary-soft, #eff6ff);
+  border-color: var(--primary, #2563eb);
+  color: var(--primary, #1d4ed8);
+}
+
+.forum-textarea-full {
+  width: 100% !important;
+  min-height: 135px !important;
+  padding: 12px 14px !important;
+  border: 1px solid var(--border-color, #cbd5e1) !important;
+  border-radius: 10px !important;
+  background: var(--bg-body, #ffffff) !important;
+  color: var(--text-primary, #0f172a) !important;
+  font-family: inherit !important;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  resize: vertical !important;
+  box-sizing: border-box !important;
+}
+
+.forum-textarea-full:focus {
+  outline: none;
+  border-color: var(--primary, #2563eb) !important;
+  box-shadow: 0 0 0 3px var(--primary-soft, rgba(37, 99, 235, 0.12));
+}
+
+.latex-live-preview {
+  background: var(--bg-surface-alt, #f1f5f9);
+  border: 1px dashed var(--border-color, #94a3b8);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: var(--text-primary, #0f172a);
+  min-height: 44px;
+}
+
+.latex-live-preview-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #64748b);
+  margin-bottom: 4px;
+}
+
+.forum-submit-full {
+  align-self: flex-end;
+  padding: 10px 20px !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+  cursor: pointer;
+}
+
+/* ================= 2. THANH TIẾN TRÌNH HỌC TẬP (%) ================= */
+.chapter-progress-box {
+  margin: 12px 0 14px 0;
+  padding: 10px 12px;
+  background: var(--bg-surface-alt, #f8fafc);
+  color: var(--text-primary, #0f172a);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+}
+
+.chapter-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary, #334155);
+  margin-bottom: 6px;
+}
+
+.chapter-progress-percent {
+  color: var(--primary, #2563eb);
+  font-weight: 700;
+}
+
+.chapter-progress-percent.completed {
+  color: var(--success, #059669);
+}
+
+.chapter-progress-track {
+  width: 100%;
+  height: 8px;
+  background: var(--border-color, #e2e8f0);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.chapter-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
+  border-radius: 999px;
+  transition: width 0.35s ease;
+}
+
+.chapter-progress-fill.completed {
+  background: linear-gradient(90deg, #059669, #10b981);
+}
+
+.section-complete-btn {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--border-color, #cbd5e1);
+  background: var(--bg-surface, #ffffff);
+  color: var(--text-secondary, #334155);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.section-complete-btn.done {
+  background: var(--success-soft, #ecfdf5);
+  border-color: var(--success, #10b981);
+  color: var(--success, #047857);
+}

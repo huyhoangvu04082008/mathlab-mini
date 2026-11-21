@@ -4,7 +4,6 @@
    KỸ THUẬT: CSS Variables (Dark/Light mode), Flexbox, CSS Grid, Keyframes
    ========================================================================== */
 
-/* 1. Khai báo biến màu toàn cục (:root) giúp dễ đổi giao diện Sáng / Tối */
 :root {
   --bg-body: #f8fafc;
   --bg-surface: #ffffff;
@@ -30,12 +29,11 @@
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 20px;
-  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-sans: "Be Vietnam Pro", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", Consolas, monospace;
   --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Chế độ nền tối (Dark Mode) kích hoạt khi thẻ <html> có thuộc tính data-theme="dark" */
 [data-theme="dark"] {
   --bg-body: #0b1120;
   --bg-surface: #111827;
@@ -52,7 +50,6 @@
   --secondary-soft: rgba(20, 184, 166, 0.18);
 }
 
-/* 2. Reset CSS cơ bản */
 *,
 *::before,
 *::after {
@@ -92,7 +89,6 @@ ul {
   padding: 0 24px;
 }
 
-/* 3. Hiệu ứng động (Animation) phục vụ tiêu chí chấm điểm */
 @keyframes floatSlow {
   0%,
   100% {
@@ -114,7 +110,6 @@ ul {
   }
 }
 
-/* Class .reveal dùng kết hợp với IntersectionObserver trong JS để tạo hiệu ứng trượt lên khi cuộn trang */
 .reveal {
   opacity: 0;
   transform: translateY(24px);
@@ -128,7 +123,6 @@ ul {
   transform: translateY(0);
 }
 
-/* 4. Thanh điều hướng (Navbar dính trên cùng - Sticky + Glassmorphism) */
 .navbar {
   position: sticky;
   top: 0;
@@ -225,7 +219,6 @@ ul {
   display: none;
 }
 
-/* 5. Hệ thống Nút bấm (Buttons) & Nhãn (Badges) */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -316,7 +309,6 @@ ul {
   color: var(--danger);
 }
 
-/* 6. Hero Banner Trang chủ */
 .hero {
   padding: 68px 0 80px;
   background:
@@ -400,7 +392,6 @@ ul {
   color: var(--text-muted);
 }
 
-/* Khung thẻ Toán học động bên phải Hero */
 .hero-math-card {
   background: #0f172a;
   color: #f8fafc;
@@ -432,7 +423,6 @@ ul {
   background: #10b981;
 }
 
-/* 7. Bố cục Section & Lưới Card */
 .section {
   padding: 68px 0;
 }
@@ -499,7 +489,6 @@ ul {
   border-color: var(--primary);
 }
 
-/* 8. Thẻ Chuyên đề Toán (products.html) */
 .toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -625,7 +614,6 @@ ul {
   gap: 8px;
 }
 
-/* 9. Phòng Thí Nghiệm Toán Tương Tác (Đồ thị & Ma trận) */
 .lab-wrapper {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -735,7 +723,6 @@ ul {
   margin: 8px 0;
 }
 
-/* 10. Cửa sổ Modal (Học lý thuyết, Làm bài tập, Quiz, Thêm chuyên đề) */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -776,7 +763,9 @@ ul {
 }
 
 .modal-body {
-  padding: 24px;
+  padding: 22px 24px 30px !important;
+  scroll-padding-top: 22px;
+  line-height: 1.75;
   overflow-y: auto;
   flex: 1;
 }
@@ -793,17 +782,21 @@ ul {
 .formula-card {
   background: var(--bg-surface-alt);
   border-left: 4px solid var(--primary);
-  padding: 14px 18px;
+  padding: 18px 20px !important;
   border-radius: 0 10px 10px 0;
   margin-bottom: 12px;
+  line-height: 1.75;
+  overflow-wrap: break-word;
 }
 
 .exercise-item {
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  padding: 16px;
+  padding: 18px 20px !important;
   margin-bottom: 14px;
   background: var(--bg-body);
+  line-height: 1.75;
+  overflow-wrap: break-word;
 }
 
 .solution-box {
@@ -844,7 +837,6 @@ ul {
   background: var(--danger-soft);
 }
 
-/* 11. Form nhập liệu & Thông báo Toast */
 .form-group {
   margin-bottom: 16px;
 }
@@ -899,7 +891,6 @@ ul {
   border-left-color: var(--danger);
 }
 
-/* 12. Footer */
 .footer {
   background: var(--bg-surface);
   border-top: 1px solid var(--border-color);
@@ -938,11 +929,6 @@ ul {
   color: var(--text-muted);
 }
 
-/* ==========================================================================
-   NÂNG CẤP V2: KHO TÀI LIỆU CHƯƠNG, THANH KINH NGHIỆM XP & ADAPTIVE QUIZ
-   ========================================================================== */
-
-/* Thanh trạng thái XP & Cấp bậc */
 .xp-banner {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -973,7 +959,6 @@ ul {
   transition: width 0.4s ease;
 }
 
-/* Danh sách Tài liệu học tập trong từng chương (Phong cách thẻ gọn gàng) */
 .doc-section {
   margin-top: 24px;
   padding-top: 20px;
@@ -1031,7 +1016,6 @@ ul {
   color: var(--text-muted);
 }
 
-/* Khung Upload tài liệu chỉ dành cho 2 Admin (Hoàng & Khoa) */
 .admin-upload-box {
   margin-top: 16px;
   padding: 16px;
@@ -1050,11 +1034,6 @@ ul {
   color: var(--danger);
 }
 
-/* ==========================================================================
-   NÂNG CẤP V3: THỰC HÀNH CUỐN CHIẾU TẠI MỤC LÝ THUYẾT & BAREM CHẤM TỰ LUẬN
-   ========================================================================== */
-
-/* Khung thực hành ngay dưới mỗi mục lý thuyết */
 .checkpoint-box {
   margin-top: 14px;
   padding: 14px 16px;
@@ -1075,7 +1054,6 @@ ul {
   color: var(--secondary);
 }
 
-/* Định dạng Barem chấm điểm tự luận từng bước */
 .rubric-box {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -1116,4 +1094,401 @@ ul {
   border-left: 3px solid var(--danger);
   color: var(--text-primary);
   font-size: 0.88rem;
+}
+
+.topic-formula-preview,
+.rubric-step,
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.section-jump-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 10px 12px;
+  background: var(--bg-surface-alt);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.unit-block {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 22px;
+  box-shadow: var(--shadow-sm);
+}
+
+.unit-header {
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: var(--primary);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.sub-block-theory {
+  margin-bottom: 14px;
+  line-height: 1.75;
+}
+
+.sub-block-example {
+  background: var(--bg-surface-alt);
+  border-left: 4px solid #f59e0b;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+
+.sub-block-practice {
+  background: var(--bg-body);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--secondary);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.sub-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 8px;
+}
+
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--bg-body);
+  border: 1px solid var(--border-color);
+  margin-bottom: 10px;
+  transition: var(--transition);
+}
+
+.leaderboard-row.is-me {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.rank-medal {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  background: var(--bg-surface-alt);
+  flex-shrink: 0;
+}
+
+.rank-1 {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+}
+.rank-2 {
+  background: linear-gradient(135deg, #94a3b8, #64748b);
+  color: #fff;
+}
+.rank-3 {
+  background: linear-gradient(135deg, #d97706, #92400e);
+  color: #fff;
+}
+
+.forum-post {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+}
+
+.forum-reply-list {
+  margin-top: 12px;
+  padding-left: 14px;
+  border-left: 2px solid var(--border-color);
+}
+
+.forum-reply-item {
+  background: var(--bg-body);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+#study-modal.modal-backdrop,
+.modal-backdrop.modal-fullscreen {
+  padding: 0 !important;
+}
+
+#study-modal.modal-backdrop .modal-box,
+.modal-backdrop.modal-fullscreen .modal-box {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  border-radius: 0 !important;
+  border: none !important;
+}
+
+#study-modal.modal-backdrop .modal-header,
+.modal-backdrop.modal-fullscreen .modal-header {
+  padding: 14px 28px;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+#study-modal.modal-backdrop .modal-footer,
+.modal-backdrop.modal-fullscreen .modal-footer {
+  padding: 12px 28px;
+}
+
+.study-reading-container {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  font-size: 1.02rem;
+  line-height: 1.8;
+  transition: max-width 0.25s ease;
+}
+
+.modal-fullscreen.study-ultra-wide .study-reading-container {
+  max-width: 100%;
+  padding: 0 12px;
+}
+
+.modal-fullscreen .unit-block {
+  padding: 26px 28px;
+  margin-bottom: 26px;
+}
+
+.modal-fullscreen .unit-header {
+  font-size: 1.24rem;
+}
+
+.modal-fullscreen .sub-block-theory {
+  font-size: 1.03rem;
+  line-height: 1.85;
+}
+
+.modal-fullscreen .sub-block-example,
+.modal-fullscreen .sub-block-practice {
+  padding: 18px 20px;
+}
+
+.modal-fullscreen .section-jump-bar {
+  position: sticky;
+  top: -22px;
+  z-index: 20;
+  background: var(--bg-glass);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (max-width: 768px) {
+  .modal-backdrop.modal-fullscreen .modal-header,
+  #study-modal.modal-backdrop .modal-footer,
+  .modal-backdrop.modal-fullscreen .modal-footer {
+    padding: 12px 16px;
+  }
+  .modal-fullscreen .unit-block {
+    padding: 18px 16px;
+  }
+}
+
+.brand-svg-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 14px;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.25);
+  transition: transform 0.25s ease;
+}
+
+.brand:hover .brand-svg-wrap {
+  transform: rotate(-4deg) scale(1.04);
+}
+
+#taylor-visual-panel {
+  overflow: hidden;
+}
+
+.taylor-controls-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.taylor-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+.taylor-slider-row input[type="range"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  cursor: pointer;
+}
+
+#taylor-play-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 7px 14px;
+}
+
+.chapter-summary-box {
+  background: linear-gradient(
+    135deg,
+    rgba(37, 99, 235, 0.06),
+    rgba(13, 148, 136, 0.08)
+  );
+  border: 1.5px solid var(--primary);
+  border-radius: 16px;
+  padding: 24px 26px;
+  margin-bottom: 26px;
+  box-shadow: var(--shadow-md);
+}
+
+.chapter-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+  border-bottom: 1.5px dashed var(--border-color);
+}
+
+.chapter-summary-header h3 {
+  font-size: 1.2rem;
+  color: var(--primary);
+  font-weight: 800;
+}
+
+.summary-grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.summary-mini-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 14px 16px;
+  line-height: 1.75;
+}
+
+.summary-mini-card h4 {
+  font-size: 0.96rem;
+  color: var(--secondary);
+  margin-bottom: 6px;
+}
+
+.exam-timer-bar {
+  position: sticky;
+  top: -22px;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 20px;
+  border-radius: 14px;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--primary);
+  box-shadow: var(--shadow-md);
+  margin-bottom: 20px;
+}
+
+.exam-timer-clock {
+  font-family: var(--font-mono);
+  font-size: 1.35rem;
+  font-weight: 800;
+  padding: 6px 14px;
+  border-radius: 10px;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.exam-timer-clock.warning {
+  background: var(--danger-soft);
+  color: var(--danger);
+  animation: pulseTimer 1s infinite;
+}
+
+@keyframes pulseTimer {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.ai-grader-card {
+  background: var(--bg-surface-alt);
+  border: 1.5px dashed var(--secondary);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-top: 14px;
+}
+
+.photo-preview-box {
+  margin-top: 12px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  max-height: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-preview-box img {
+  max-width: 100%;
+  max-height: 350px;
+  object-fit: contain;
+}
+
+.ai-feedback-result {
+  margin-top: 14px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: var(--bg-surface);
+  border-left: 4px solid var(--secondary);
+  line-height: 1.75;
+}
+
+.contrib-hub-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  padding: 26px;
+  box-shadow: var(--shadow-md);
 }

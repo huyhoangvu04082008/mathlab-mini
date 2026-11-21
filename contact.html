@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Liên hệ &amp; Hỏi đáp — MathLab Mini</title>
 
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%231d4ed8'/%3E%3Cstop offset='100%25' stop-color='%230d9488'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Ccircle cx='32' cy='32' r='24' fill='none' stroke='%23ffffff' stroke-opacity='0.35' stroke-width='2'/%3E%3Ctext x='32' y='39' text-anchor='middle' fill='%23ffffff' font-family='Georgia,serif' font-weight='bold' font-size='24'%3E%E2%88%AB%E2%88%91%3C/text%3E%3C/svg%3E"
+    />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -12,23 +18,116 @@
       rel="stylesheet"
     />
 
+    <!-- KaTeX -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+    />
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+    ></script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+    ></script>
+
     <link rel="stylesheet" href="css/style.css" />
     <link rel="stylesheet" href="css/responsive.css" />
+    <link rel="stylesheet" href="css/mathlab-upgrade.css" />
   </head>
   <body>
     <!-- NAVBAR -->
     <header class="navbar">
       <div class="container navbar-inner">
         <a href="index.html" class="brand">
-          <div class="brand-logo">∑∫</div>
-          <div>MathLab <span>Mini</span></div>
+          <div class="brand-svg-wrap" aria-hidden="true">
+            <svg width="42" height="42" viewBox="0 0 64 64" fill="none">
+              <defs>
+                <linearGradient
+                  id="hcmueGrad"
+                  x1="0"
+                  y1="0"
+                  x2="64"
+                  y2="64"
+                  gradientUnits="userSpaceOnUse"
+                >
+                  <stop offset="0%" stop-color="#1e40af" />
+                  <stop offset="55%" stop-color="#2563eb" />
+                  <stop offset="100%" stop-color="#0d9488" />
+                </linearGradient>
+              </defs>
+              <rect width="64" height="64" rx="14" fill="url(#hcmueGrad)" />
+              <circle
+                cx="32"
+                cy="32"
+                r="24"
+                stroke="#ffffff"
+                stroke-opacity="0.32"
+                stroke-width="1.8"
+                stroke-dasharray="4 2"
+              />
+              <path
+                d="M16 44L32 16L48 44H16Z"
+                stroke="#93c5fd"
+                stroke-opacity="0.45"
+                stroke-width="1.5"
+              />
+              <text
+                x="32"
+                y="38"
+                text-anchor="middle"
+                fill="#ffffff"
+                font-family="Georgia, serif"
+                font-weight="700"
+                font-size="21"
+              >
+                ∫∑x
+              </text>
+              <rect
+                x="13"
+                y="47"
+                width="38"
+                height="11"
+                rx="5.5"
+                fill="#0f172a"
+                fill-opacity="0.72"
+              />
+              <text
+                x="32"
+                y="55"
+                text-anchor="middle"
+                fill="#e0f2fe"
+                font-family="Plus Jakarta Sans, sans-serif"
+                font-weight="800"
+                font-size="7.5"
+                letter-spacing="0.8"
+              >
+                HCMUE
+              </text>
+            </svg>
+          </div>
+          <div>
+            MathLab <span>Mini</span>
+            <div
+              style="
+                font-size: 0.68rem;
+                font-weight: 700;
+                color: var(--text-muted);
+                line-height: 1;
+                margin-top: 2px;
+              "
+            >
+              KHOA CNTT • ĐHSP TP.HCM
+            </div>
+          </div>
         </a>
 
         <nav class="nav-links" id="nav-links">
           <a href="index.html">Trang chủ</a>
           <a href="products.html">Chuyên đề &amp; Lab</a>
           <a href="about.html">Giới thiệu</a>
-          <a href="contact.html">Liên hệ &amp; FAQ</a>
+          <a href="contact.html" class="active">Liên hệ &amp; FAQ</a>
         </nav>
 
         <div class="nav-actions">
@@ -221,11 +320,13 @@
                   font-size: 0.93rem;
                 "
               >
-                Bạn có thể dùng các ký hiệu chuẩn như <code>x^3 - 3*x</code>,
-                <code>sin(x)</code>, <code>cos(x)</code>, <code>exp(x)</code>,
-                <code>ln(x)</code>, <code>sqrt(x)</code>. Hệ thống cũng tự động
-                hiểu cách viết nhân tắt như <code>2x</code> hoặc
-                <code>3(x+1)</code>.
+                Bạn có thể nhập cả cú pháp chuẩn (như <code>x^3 - 3*x</code>,
+                <code>sin(x)</code>, <code>exp(x)</code>) lẫn cú pháp LaTeX trực
+                tiếp qua bàn phím công thức (như <code>\frac{\sin(x)}{x}</code>,
+                <code>\sqrt{4 - x^2}</code>, <code>e^{-0.4x}\cos(2x)</code>).
+                Ngoài ra, bạn có thể kéo thả tiếp điểm $x_0$, phóng to/thu nhỏ
+                trực tiếp trên Canvas hoặc chuyển sang chế độ
+                <strong>GeoGebra Nhúng</strong>.
               </div>
             </div>
 
@@ -331,19 +432,106 @@
     <!-- FOOTER -->
     <footer class="footer">
       <div class="container">
-        <div class="footer-bottom" style="border-top: none; padding-top: 0">
+        <div class="footer-grid">
+          <div>
+            <a href="index.html" class="brand" style="margin-bottom: 12px">
+              <div class="brand-svg-wrap" aria-hidden="true">
+                <svg width="38" height="38" viewBox="0 0 64 64" fill="none">
+                  <rect width="64" height="64" rx="14" fill="url(#hcmueGrad)" />
+                  <text
+                    x="32"
+                    y="38"
+                    text-anchor="middle"
+                    fill="#ffffff"
+                    font-family="Georgia, serif"
+                    font-weight="700"
+                    font-size="21"
+                  >
+                    ∫∑x
+                  </text>
+                  <text
+                    x="32"
+                    y="54"
+                    text-anchor="middle"
+                    fill="#e0f2fe"
+                    font-family="Plus Jakarta Sans, sans-serif"
+                    font-weight="800"
+                    font-size="8"
+                  >
+                    HCMUE
+                  </text>
+                </svg>
+              </div>
+              <div>MathLab <span>Mini</span></div>
+            </a>
+            <p style="font-size: 0.9rem; color: var(--text-secondary)">
+              Nền tảng hỗ trợ sinh viên Khoa Công nghệ Thông tin — Trường ĐH Sư
+              phạm TP.HCM học tập Giải tích 1 &amp; Đại số tuyến tính.
+            </p>
+          </div>
+          <div>
+            <h4>Điều hướng</h4>
+            <ul>
+              <li><a href="index.html">Trang chủ</a></li>
+              <li><a href="products.html">Chuyên đề &amp; Lab</a></li>
+              <li><a href="about.html">Giới thiệu dự án</a></li>
+              <li><a href="contact.html">Liên hệ &amp; FAQ</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4>Phòng Thi &amp; Công cụ</h4>
+            <ul>
+              <li>
+                <a
+                  href="javascript:void(0)"
+                  onclick="openExamHubModal('midterm-1')"
+                  >Thi thử Giữa Kỳ 1 (Giải tích 1)</a
+                >
+              </li>
+              <li>
+                <a
+                  href="javascript:void(0)"
+                  onclick="openExamHubModal('midterm-2')"
+                  >Thi thử Giữa Kỳ 2 (ĐSTT)</a
+                >
+              </li>
+              <li>
+                <a
+                  href="javascript:void(0)"
+                  onclick="openExamHubModal('final-all')"
+                  >Thi thử Cuối Kỳ Tổng Hợp</a
+                >
+              </li>
+              <li>
+                <a href="products.html#math-lab">Phòng Lab Toán trực quan</a>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h4>Nhóm thực hiện</h4>
+            <ul>
+              <li><strong>Vũ Huy Hoàng</strong> — MSSV: 52.01.104.124</li>
+              <li><strong>Hồ Đắc Anh Khoa</strong> — MSSV: 52.01.104.042</li>
+              <li>Học phần: Thiết kế Web (CNTT — HCMUE)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
           <span
             >© 2026 MathLab Mini — Thực hiện bởi Vũ Huy Hoàng (52.01.104.124)
             &amp; Hồ Đắc Anh Khoa (52.01.104.042).</span
           >
-          <a href="index.html" style="color: var(--primary); font-weight: 600"
-            >← Quay về Trang chủ</a
-          >
+          <span>Khoa CNTT • Trường ĐH Sư phạm TP.HCM</span>
         </div>
       </div>
     </footer>
 
+    <script src="js/data-gt1.js"></script>
+    <script src="js/data-dstt.js"></script>
+    <script src="js/data-trr.js"></script>
     <script src="js/data.js"></script>
+    <script src="js/gemini-ai.js"></script>
     <script src="js/main.js"></script>
+    <script src="js/mathlab-upgrade.js"></script>
   </body>
 </html>
