@@ -1,5 +1,5 @@
 /* ==========================================================================
-   FILE: js/math-tools.js (PHIÊN BẢN V5.2 — PHÒNG LAB ĐỒ THỊ KIỂU GEOGEBRA & BỘ GÕ LATEX)
+   FILE: js/math-tools.js (PHIÊN BẢN V5.4 — PHÒNG LAB ĐỒ THỊ KIỂU GEOGEBRA & BỘ GÕ LATEX)
    1. Đồ thị Hàm số tương tác (Pan/Zoom/Crosshair/Kéo tiếp điểm x0), Bộ gõ LaTeX & Taylor-Maclaurin
    2. Phân tích Ma trận vuông & chữ nhật m × n (det, rank, REF, adj(A), A^-1, A^T, tr, A^2)
    3. Giải Hệ PTTT tổng quát m × n (Khử Gauss, Kronecker-Capelli, nghiệm tham số & Cramer)
@@ -100,10 +100,30 @@ function replaceLatexCommandWithBraces(str, cmd, replacer) {
   return out;
 }
 
+function normalizeJsMathPrefixes(raw) {
+  return String(raw || "")
+    .replace(/\bMath\.log10\s*\(/g, "log(")
+    .replace(/\bMath\.log\s*\(/g, "ln(")
+    .replace(/\bMath\.PI\b/g, "pi")
+    .replace(/\bMath\.E\b/g, "e")
+    .replace(/\bMath\./g, "");
+}
+
 function latexToMathExpr(raw) {
-  let s = String(raw || "").trim();
+  let s = normalizeJsMathPrefixes(raw)
+    // Chuẩn hóa khoảng trắng ẩn & dấu trừ/nhân Unicode khi copy từ web/PDF/chat
+    .replace(/[\u00A0\u200B-\u200D\uFEFF]/g, " ")
+    .replace(/[\u2212\u2013\u2014]/g, "-")
+    .replace(/[\u00D7\u22C5]/g, "*")
+    .replace(/[（]/g, "(")
+    .replace(/[）]/g, ")")
+    .trim();
+
   // Bỏ dấu $ bao ngoài nếu người dùng dán từ công thức KaTeX
-  s = s.replace(/^\$\$|\$\$$/g, "").replace(/^\$|\$$/g, "").trim();
+  s = s
+    .replace(/^\$\$|\$\$$/g, "")
+    .replace(/^\$|\$$/g, "")
+    .trim();
   // Bỏ tiền tố y = hoặc f(x) = nếu có
   s = s.replace(/^(?:y|f\s*\(\s*x\s*\))\s*=\s*/i, "");
 
@@ -118,24 +138,14 @@ function latexToMathExpr(raw) {
     .replace(/\\cdot|\\times/g, "*");
 
   // Chuyển \frac{a}{b} và \dfrac{a}{b} (hỗ trợ lồng nhau)
-  s = replaceLatexCommandWithBraces(
-    s,
-    "\\dfrac",
-    (a, b) => `((${a})/(${b}))`,
-  );
-  s = replaceLatexCommandWithBraces(
-    s,
-    "\\frac",
-    (a, b) => `((${a})/(${b}))`,
-  );
+  s = replaceLatexCommandWithBraces(s, "\\dfrac", (a, b) => `((${a})/(${b}))`);
+  s = replaceLatexCommandWithBraces(s, "\\frac", (a, b) => `((${a})/(${b}))`);
 
   // Chuyển \sqrt[n]{x} và \sqrt{x}
   s = s.replace(/\\sqrt\s*\[([^\]]+)\]\s*\{([^{}]+)\}/g, "((($2))**(1/($1)))");
   s = replaceLatexCommandWithBraces(s, "\\sqrt", (a) => `sqrt(${a})`);
 
   // Chuyển lũy thừa dạng LaTeX ^{...} -> **(...)
-  s = replaceLatexCommandWithBraces(s, "^{", (a) => `**(${a})`);
-  // Nếu vẫn còn dấu ^{ sau replace (do ký tự { dính liền), xử lý trực tiếp
   let guardPow = 0;
   while (s.includes("^{") && guardPow++ < 30) {
     const pIdx = s.indexOf("^{");
@@ -143,6 +153,9 @@ function latexToMathExpr(raw) {
     if (!grp) break;
     s = s.slice(0, pIdx) + `**(${grp.content})` + s.slice(grp.endIdx + 1);
   }
+
+  // Hỗ trợ \log_e(...) hoặc \log_{e}(...) -> ln(...)
+  s = s.replace(/\\?log\s*_\s*\{?\s*e\s*\}?\s*/gi, "ln");
 
   // Chuyển các lệnh hàm lượng giác, log, mũ LaTeX
   s = s
@@ -162,50 +175,70 @@ function latexToMathExpr(raw) {
     .replace(/\\abs\b/g, "abs")
     .replace(/\\pi\b/gi, "pi");
 
-  // Hỗ trợ viết tắt không ngoặc kiểu LaTeX: \sin x -> sin(x), \cos 2x -> cos(2x)
+  // Hỗ trợ viết tắt không ngoặc kiểu LaTeX: \sin x -> sin(x), \ln x -> ln(x)
   s = s.replace(
     /\b(sin|cos|tan|cot|ln|log|exp|sqrt)\s+([0-9.]*x(?:\^[0-9.]+)?|[0-9.]+|pi)\b/g,
     "$1($2)",
   );
 
-  // Chuyển cặp dấu trị tuyệt đối |...| thành abs(...)
-  s = s.replace(/\|([^|]+)\|/g, "abs($1)");
+  // Chuyển cặp dấu trị tuyệt đối |...| thành (abs(...)) để hoạt động cả trong \ln|1+x|
+  s = s.replace(/\|([^|]+)\|/g, "(abs($1))");
 
-  // Chuyển ngoặc nhọn còn lại thành ngoặc tròn
-  s = s.replace(/\{/g, "(").replace(/\}/g, ")");
+  // Hỗ trợ lũy thừa hàm lượng giác / log dạng sin^2(x), \ln^2(1+x)
+  s = s.replace(
+    /\b(sin|cos|tan|cot|asin|acos|atan|sinh|cosh|tanh|ln|log|exp)\s*\*\*\s*(\([^()]+\)|[0-9.]+)\s*\(([^()]+)\)/g,
+    "(($1($3))**($2))",
+  );
+
+  // Chuyển ngoặc nhọn và ngoặc vuông nhóm biểu thức thành ngoặc tròn
+  s = s
+    .replace(/\{/g, "(")
+    .replace(/\}/g, ")")
+    .replace(/\[/g, "(")
+    .replace(/\]/g, ")");
 
   return s;
 }
 
+function compileMathFn(expr) {
+  const clean = latexToMathExpr(expr)
+    // Hỗ trợ nhân tắt: 2x -> 2*x, 3sin(x) -> 3*sin(x), 2(x+1) -> 2*(x+1), )x -> )*x, )( -> )*(
+    .replace(/(\d)([a-zA-Z(])/g, "$1*$2")
+    .replace(/(\))([a-zA-Z0-9(])/g, "$1*$2")
+    .replace(
+      /\bx(?=(?:sin|cos|tan|cot|asin|acos|atan|sinh|cosh|tanh|ln|log|exp|sqrt|abs|\())/g,
+      "x*",
+    )
+    .replace(/\^/g, "**")
+    // Bọc ngoặc nếu số mũ có dấu âm/dương đứng ngay sau ** (tránh SyntaxError JS như e**-x)
+    .replace(/\*\*\s*([+-][a-zA-Z0-9_.]+)/g, "**($1)")
+    .replace(/(?<!Math\.)\basin\s*\(/g, "Math.asin(")
+    .replace(/(?<!Math\.)\bacos\s*\(/g, "Math.acos(")
+    .replace(/(?<!Math\.)\batan\s*\(/g, "Math.atan(")
+    .replace(/(?<!Math\.)\bsinh\s*\(/g, "Math.sinh(")
+    .replace(/(?<!Math\.)\bcosh\s*\(/g, "Math.cosh(")
+    .replace(/(?<!Math\.)\btanh\s*\(/g, "Math.tanh(")
+    .replace(/(?<!Math\.)\bsin\s*\(/g, "Math.sin(")
+    .replace(/(?<!Math\.)\bcos\s*\(/g, "Math.cos(")
+    .replace(/(?<!Math\.)\btan\s*\(/g, "Math.tan(")
+    .replace(/(?<!Math\.)\bcot\s*\(/g, "cot(")
+    .replace(/(?<!Math\.)\bexp\s*\(/g, "Math.exp(")
+    .replace(/(?<!Math\.)\bln\s*\(/g, "Math.log(")
+    .replace(/(?<!Math\.)\blog\s*\(/g, "Math.log10(")
+    .replace(/(?<!Math\.)\bsqrt\s*\(/g, "Math.sqrt(")
+    .replace(/(?<!Math\.)\babs\s*\(/g, "Math.abs(")
+    .replace(/(?<!Math\.)\bpi\b/gi, "Math.PI")
+    .replace(/(?<!Math\.)\be\b/g, "Math.E");
+
+  const cotFn = (v) => 1 / Math.tan(v);
+  const rawFn = new Function("x", "cot", `return ${clean};`);
+  return (x) => rawFn(x, cotFn);
+}
+
 function evalRealFn(expr, x) {
   try {
-    let clean = latexToMathExpr(expr)
-      // Hỗ trợ nhân tắt: 2x -> 2*x, 3sin(x) -> 3*sin(x), 2(x+1) -> 2*(x+1), )x -> )*x, )( -> )*(
-      .replace(/(\d)([a-zA-Z(])/g, "$1*$2")
-      .replace(/(\))([a-zA-Z0-9(])/g, "$1*$2")
-      .replace(/\bx(?=(?:sin|cos|tan|cot|asin|acos|atan|sinh|cosh|tanh|ln|log|exp|sqrt|abs|\())/g, "x*")
-      .replace(/\^/g, "**")
-      .replace(/\basin\(/g, "Math.asin(")
-      .replace(/\bacos\(/g, "Math.acos(")
-      .replace(/\batan\(/g, "Math.atan(")
-      .replace(/\bsinh\(/g, "Math.sinh(")
-      .replace(/\bcosh\(/g, "Math.cosh(")
-      .replace(/\btanh\(/g, "Math.tanh(")
-      .replace(/\bsin\(/g, "Math.sin(")
-      .replace(/\bcos\(/g, "Math.cos(")
-      .replace(/\btan\(/g, "Math.tan(")
-      .replace(/\bcot\(/g, "cot(")
-      .replace(/\bexp\(/g, "Math.exp(")
-      .replace(/\bln\(/g, "Math.log(")
-      .replace(/\blog\(/g, "Math.log10(")
-      .replace(/\bsqrt\(/g, "Math.sqrt(")
-      .replace(/\babs\(/g, "Math.abs(")
-      .replace(/\bpi\b/gi, "Math.PI")
-      .replace(/\be\b/g, "Math.E");
-
-    const cotFn = (v) => 1 / Math.tan(v);
-    const fn = new Function("x", "cot", `return ${clean};`);
-    const v = fn(x, cotFn);
+    const fn = compileMathFn(expr);
+    const v = fn(x);
     return Number.isFinite(v) ? v : NaN;
   } catch {
     return NaN;
@@ -213,13 +246,18 @@ function evalRealFn(expr, x) {
 }
 
 function exprToPrettyLatex(raw) {
-  let s = String(raw || "").trim();
+  let s = normalizeJsMathPrefixes(raw)
+    .replace(/[\u00A0\u200B-\u200D\uFEFF]/g, " ")
+    .replace(/[\u2212\u2013\u2014]/g, "-")
+    .trim();
   if (!s) return "f(x)";
-  s = s.replace(/^\$\$|\$\$$/g, "").replace(/^\$|\$$/g, "").trim();
+  s = s
+    .replace(/^\$\$|\$\$$/g, "")
+    .replace(/^\$|\$$/g, "")
+    .trim();
   if (!/^(?:y|f\s*\(\s*x\s*\))\s*=/.test(s)) {
     s = "y = " + s;
   }
-  // Làm đẹp nhân tắt & tên hàm cho KaTeX nếu người dùng gõ cú pháp máy tính
   s = s
     .replace(/(\d)\s*\*\s*([a-zA-Z\\(])/g, "$1$2")
     .replace(/\*/g, " \\cdot ")
@@ -316,58 +354,107 @@ function parseDims(val, defR = 3, defC = 3) {
    1. ĐỒ THỊ HÀM SỐ TƯƠNG TÁC KIỂU GEOGEBRA, TIẾP TUYẾN, TÍCH PHÂN & TAYLOR
    ========================================================================== */
 function computeTaylorCoeffs(presetType, customExpr, x0, maxDegree) {
-  const N = 64;
-  const r = 0.35;
+  const normalized = latexToMathExpr(customExpr).replace(/\s+/g, "");
+  let mode = presetType;
+  if (mode === "custom") {
+    if (normalized === "ln(1+x)" || normalized === "ln(x+1)") mode = "ln1px";
+    else if (normalized === "sin(x)") mode = "sin";
+    else if (normalized === "cos(x)") mode = "cos";
+    else if (normalized === "e**(x)" || normalized === "exp(x)") mode = "exp";
+    else if (normalized === "((1)/(1-x))" || normalized === "1/(1-x)")
+      mode = "inv1mx";
+  }
+
   const coeffs = [];
+  let fact = 1;
 
-  const evalComplexPreset = (z) => {
-    if (presetType === "sin") return CMath.sin(z);
-    if (presetType === "cos") return CMath.cos(z);
-    if (presetType === "exp") return CMath.exp(z);
-    if (presetType === "ln1px")
-      return CMath.log(CMath.add({ re: 1, im: 0 }, z));
-    if (presetType === "inv1mx")
-      return CMath.div({ re: 1, im: 0 }, CMath.sub({ re: 1, im: 0 }, z));
-    return { re: evalRealFn(customExpr, z.re), im: 0 };
-  };
-
-  if (presetType === "custom") {
-    const comb = (n, i) => {
-      let res = 1;
-      for (let j = 1; j <= i; j++) res = (res * (n - j + 1)) / j;
-      return res;
-    };
-    const fact = (n) => {
-      let res = 1;
-      for (let j = 2; j <= n; j++) res *= j;
-      return res;
-    };
+  if (mode === "sin") {
     for (let k = 0; k <= maxDegree; k++) {
-      const h = k <= 3 ? 0.04 : k <= 5 ? 0.12 : 0.22;
-      let diffSum = 0;
-      for (let i = 0; i <= k; i++) {
-        const sign = i % 2 === 0 ? 1 : -1;
-        const xi = x0 + (k / 2 - i) * h;
-        diffSum += sign * comb(k, i) * evalRealFn(customExpr, xi);
-      }
-      const ck = diffSum / (Math.pow(h, k) * fact(k));
-      coeffs.push(Number.isFinite(ck) ? ck : 0);
+      if (k > 0) fact *= k;
+      const mod = k % 4;
+      const deriv =
+        mod === 0
+          ? Math.sin(x0)
+          : mod === 1
+            ? Math.cos(x0)
+            : mod === 2
+              ? -Math.sin(x0)
+              : -Math.cos(x0);
+      coeffs.push(deriv / fact);
     }
     return coeffs;
   }
 
-  for (let k = 0; k <= maxDegree; k++) {
-    let sumRe = 0;
-    for (let m = 0; m < N; m++) {
-      const theta = (2 * Math.PI * m) / N;
-      const z = { re: x0 + r * Math.cos(theta), im: r * Math.sin(theta) };
-      const fz = evalComplexPreset(z);
-      const expMinus = { re: Math.cos(k * theta), im: -Math.sin(k * theta) };
-      sumRe += CMath.mul(fz, expMinus).re;
+  if (mode === "cos") {
+    for (let k = 0; k <= maxDegree; k++) {
+      if (k > 0) fact *= k;
+      const mod = k % 4;
+      const deriv =
+        mod === 0
+          ? Math.cos(x0)
+          : mod === 1
+            ? -Math.sin(x0)
+            : mod === 2
+              ? -Math.cos(x0)
+              : Math.sin(x0);
+      coeffs.push(deriv / fact);
     }
-    let ck = sumRe / (N * Math.pow(r, k));
-    if (Math.abs(ck) < 1e-10) ck = 0;
-    coeffs.push(ck);
+    return coeffs;
+  }
+
+  if (mode === "exp") {
+    const ex0 = Math.exp(x0);
+    for (let k = 0; k <= maxDegree; k++) {
+      if (k > 0) fact *= k;
+      coeffs.push(ex0 / fact);
+    }
+    return coeffs;
+  }
+
+  if (mode === "ln1px") {
+    const u = 1 + x0;
+    if (u <= 0) return Array(maxDegree + 1).fill(NaN);
+    coeffs.push(Math.log(u));
+    let powU = u;
+    for (let k = 1; k <= maxDegree; k++) {
+      const sign = k % 2 === 1 ? 1 : -1;
+      coeffs.push(sign / (k * powU));
+      powU *= u;
+    }
+    return coeffs;
+  }
+
+  if (mode === "inv1mx") {
+    const u = 1 - x0;
+    if (Math.abs(u) < 1e-12) return Array(maxDegree + 1).fill(NaN);
+    let powU = u;
+    for (let k = 0; k <= maxDegree; k++) {
+      coeffs.push(1 / powU);
+      powU *= u;
+    }
+    return coeffs;
+  }
+
+  const comb = (n, i) => {
+    let res = 1;
+    for (let j = 1; j <= i; j++) res = (res * (n - j + 1)) / j;
+    return res;
+  };
+  const factorial = (n) => {
+    let res = 1;
+    for (let j = 2; j <= n; j++) res *= j;
+    return res;
+  };
+  for (let k = 0; k <= maxDegree; k++) {
+    const h = k <= 3 ? 0.04 : k <= 5 ? 0.12 : 0.22;
+    let diffSum = 0;
+    for (let i = 0; i <= k; i++) {
+      const sign = i % 2 === 0 ? 1 : -1;
+      const xi = x0 + (k / 2 - i) * h;
+      diffSum += sign * comb(k, i) * evalRealFn(customExpr, xi);
+    }
+    const ck = diffSum / (Math.pow(h, k) * factorial(k));
+    coeffs.push(Number.isFinite(ck) ? ck : 0);
   }
   return coeffs;
 }
@@ -573,7 +660,6 @@ function bindCalculusCanvasInteractions(canvas) {
     }
   });
 
-  // Hỗ trợ cảm ứng (Touch pan & kéo x0 trên điện thoại/tablet)
   canvas.addEventListener(
     "touchstart",
     (e) => {
@@ -628,7 +714,11 @@ function bindCalculusCanvasInteractions(canvas) {
 
 function initGraphLabUI() {
   const slot = document.getElementById("taylor-controls-slot");
-  if (slot && !document.getElementById("taylor-visual-panel")) {
+  if (
+    slot &&
+    !document.getElementById("taylor-visual-panel") &&
+    slot.innerHTML.trim() === ""
+  ) {
     slot.innerHTML = `
       <div id="taylor-visual-panel" style="margin-top:10px; padding:14px; border-radius:12px; background:var(--bg-surface-alt); border:1px solid var(--border-color);">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
@@ -732,12 +822,20 @@ function runCalculusLab() {
   if (!canvas) return;
 
   bindCalculusCanvasInteractions(canvas);
+  // Đồng bộ khung hiển thị LaTeX ngay cả khi script khác gán giá trị vào #calc-func bằng JS
+  updateCalcLatexPreview();
 
-  const ctx = canvas.getContext("2d");
-  const width = (canvas.width = canvas.parentElement?.clientWidth
-    ? Math.max(300, canvas.parentElement.clientWidth - 24)
-    : 640);
-  const height = (canvas.height = 390);
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  const parentW = canvas.parentElement ? canvas.parentElement.clientWidth : 0;
+  const targetW = parentW > 60 ? Math.max(300, parentW - 24) : 640;
+  const targetH = 390;
+
+  if (canvas.width !== targetW) canvas.width = targetW;
+  if (canvas.height !== targetH) canvas.height = targetH;
+
+  const width = canvas.width;
+  const height = canvas.height;
+  ctx.clearRect(0, 0, width, height);
 
   const scale = calcViewport.scale;
   const originX = width / 2 + calcViewport.offsetX;
@@ -759,7 +857,9 @@ function runCalculusLab() {
   const yMaxWorld = originY / scale;
 
   // Lưới phụ mờ
-  ctx.strokeStyle = isDark ? "rgba(30, 41, 59, 0.55)" : "rgba(226, 232, 240, 0.65)";
+  ctx.strokeStyle = isDark
+    ? "rgba(30, 41, 59, 0.55)"
+    : "rgba(226, 232, 240, 0.65)";
   ctx.lineWidth = 0.8;
   const startMinorX = Math.floor(xMinWorld / minorStep) * minorStep;
   for (let gx = startMinorX; gx <= xMaxWorld; gx += minorStep) {
@@ -798,7 +898,7 @@ function runCalculusLab() {
     ctx.stroke();
   }
 
-  // Trục Ox, Oy + mũi tên GeoGebra
+  // Trục Ox, Oy
   ctx.strokeStyle = isDark ? "#64748b" : "#334155";
   ctx.lineWidth = 1.8;
   ctx.beginPath();
@@ -832,6 +932,35 @@ function runCalculusLab() {
   }
 
   const expr = document.getElementById("calc-func")?.value || "x^3 - 3*x";
+  let compiledFn = null;
+  let compileError = null;
+  let runtimeError = null;
+  try {
+    compiledFn = compileMathFn(expr);
+    // Kiểm tra thử 1 điểm để bắt sớm lỗi runtime (như biến lạ hoặc sai tên hàm)
+    compiledFn(0.5);
+  } catch (err) {
+    compileError = err.message || "Cú pháp biểu thức chưa hợp lệ";
+  }
+
+  const safeEval = (xVal) => {
+    if (!compiledFn) return NaN;
+    try {
+      const v = compiledFn(xVal);
+      return Number.isFinite(v) ? v : NaN;
+    } catch (err) {
+      if (!runtimeError) runtimeError = err.message;
+      return NaN;
+    }
+  };
+
+  if (compileError) {
+    if (out) {
+      out.innerHTML = `<div style="color:var(--danger); font-weight:700;">⚠️ Lỗi cú pháp hàm số: <code>${compileError}</code> — Hãy kiểm tra lại dấu ngoặc hoặc ký hiệu hàm (VD: <code>ln(1+x)</code> hoặc <code>\\ln(1+x)</code>).</div>`;
+    }
+    return;
+  }
+
   const x0Raw = parseFloat(document.getElementById("calc-x0")?.value ?? "1");
   const x0 = Number.isFinite(x0Raw) ? x0Raw : 0;
   const aRaw = parseFloat(document.getElementById("calc-a")?.value ?? "0");
@@ -847,19 +976,55 @@ function runCalculusLab() {
     const dxInt = (hi - lo) / steps;
     ctx.fillStyle = "rgba(59, 130, 246, 0.18)";
     ctx.beginPath();
-    ctx.moveTo(originX + lo * scale, originY);
+    let areaStarted = false;
+    let firstValidX = lo;
+    let lastValidX = hi;
     for (let i = 0; i <= steps; i++) {
       const x = lo + i * dxInt;
-      const y = evalRealFn(expr, x);
+      const y = safeEval(x);
       if (Number.isFinite(y)) {
-        const clampedPy = Math.max(-height, Math.min(height * 2, originY - y * scale));
+        const clampedPy = Math.max(
+          -height,
+          Math.min(height * 2, originY - y * scale),
+        );
+        if (!areaStarted) {
+          firstValidX = x;
+          ctx.moveTo(originX + firstValidX * scale, originY);
+          areaStarted = true;
+        }
+        lastValidX = x;
         ctx.lineTo(originX + x * scale, clampedPy);
       }
     }
-    ctx.lineTo(originX + hi * scale, originY);
-    ctx.closePath();
-    ctx.fill();
+    if (areaStarted) {
+      ctx.lineTo(originX + lastValidX * scale, originY);
+      ctx.closePath();
+      ctx.fill();
+    }
   }
+
+  // Hàm phụ tìm điểm sát biên miền xác định bằng chia đôi (giúp ln(1+x), sqrt(4-x^2) nối liền tới biên)
+  const findDomainEdgePoint = (invalidPx, validPx) => {
+    let lo = invalidPx;
+    let hi = validPx;
+    let bestPx = validPx;
+    let bestY = safeEval((validPx - originX) / scale);
+    for (let step = 0; step < 16; step++) {
+      const mid = (lo + hi) * 0.5;
+      const midY = safeEval((mid - originX) / scale);
+      if (Number.isFinite(midY) && Math.abs(midY) < 1e4) {
+        bestPx = mid;
+        bestY = midY;
+        hi = mid;
+      } else {
+        lo = mid;
+      }
+    }
+    return {
+      px: bestPx,
+      py: Math.max(-height * 2, Math.min(height * 3, originY - bestY * scale)),
+    };
+  };
 
   // 2. Vẽ đồ thị y = f(x) màu xanh dương
   ctx.strokeStyle = "#3b82f6";
@@ -867,14 +1032,25 @@ function runCalculusLab() {
   ctx.beginPath();
   let started = false;
   let prevPy = null;
+  let prevPx = null;
+  let prevValid = false;
+  let plottedCount = 0;
+
   for (let px = 0; px <= width; px += 1.5) {
     const x = (px - originX) / scale;
-    const y = evalRealFn(expr, x);
+    const y = safeEval(x);
     if (!Number.isFinite(y)) {
+      if (started && prevValid && prevPx !== null) {
+        const edge = findDomainEdgePoint(px, prevPx);
+        ctx.lineTo(edge.px, edge.py);
+      }
       started = false;
       prevPy = null;
+      prevValid = false;
+      prevPx = px;
       continue;
     }
+    plottedCount++;
     const py = originY - y * scale;
     // Ngắt nét nếu gặp tiệm cận đứng nhảy vọt
     if (
@@ -884,22 +1060,42 @@ function runCalculusLab() {
     ) {
       started = false;
       prevPy = null;
+      prevValid = false;
+      prevPx = px;
       continue;
     }
     if (!started) {
-      ctx.moveTo(px, py);
+      if (!prevValid && prevPx !== null) {
+        const edge = findDomainEdgePoint(prevPx, px);
+        ctx.moveTo(edge.px, edge.py);
+        ctx.lineTo(px, py);
+      } else {
+        ctx.moveTo(px, py);
+      }
       started = true;
     } else {
       ctx.lineTo(px, py);
     }
     prevPy = py;
+    prevPx = px;
+    prevValid = true;
   }
   ctx.stroke();
 
   // 3. Vẽ tiếp tuyến tại x0 màu xanh ngọc + tay nắm kéo thả kiểu GeoGebra
   const h = 1e-5;
-  const y0 = evalRealFn(expr, x0);
-  const slope = (evalRealFn(expr, x0 + h) - evalRealFn(expr, x0 - h)) / (2 * h);
+  const y0 = safeEval(x0);
+  const yPlus = safeEval(x0 + h);
+  const yMinus = safeEval(x0 - h);
+  let slope = NaN;
+  if (Number.isFinite(yPlus) && Number.isFinite(yMinus)) {
+    slope = (yPlus - yMinus) / (2 * h);
+  } else if (Number.isFinite(yPlus) && Number.isFinite(y0)) {
+    slope = (yPlus - y0) / h;
+  } else if (Number.isFinite(yMinus) && Number.isFinite(y0)) {
+    slope = (y0 - yMinus) / h;
+  }
+
   canvas._tangentHandle = null;
   if (Number.isFinite(y0) && Number.isFinite(slope)) {
     ctx.strokeStyle = "#10b981";
@@ -915,7 +1111,6 @@ function runCalculusLab() {
     const handlePy = originY - y0 * scale;
     canvas._tangentHandle = { px: handlePx, py: handlePy };
 
-    // Vòng hào quang tay nắm kéo điểm x0
     ctx.fillStyle = "rgba(16, 185, 129, 0.25)";
     ctx.beginPath();
     ctx.arc(handlePx, handlePy, 11, 0, Math.PI * 2);
@@ -930,8 +1125,11 @@ function runCalculusLab() {
     ctx.stroke();
   }
 
-  // 4. Vẽ đa thức Taylor P_n(x) nếu bật
-  const showTaylor = document.getElementById("toggle-taylor-overlay")?.checked;
+  // 4. Vẽ đa thức Taylor P_n(x) (chỉ chạy bản dự phòng nếu chưa nạp TaylorEngine từ gemini-ai.js)
+  const hasAdvancedTaylor = typeof window.renderTaylorOverlay === "function";
+  const showTaylor =
+    !hasAdvancedTaylor &&
+    document.getElementById("toggle-taylor-overlay")?.checked;
   const preset = document.getElementById("taylor-preset")?.value || "custom";
   const deg = parseInt(
     document.getElementById("taylor-degree")?.value || "3",
@@ -971,14 +1169,14 @@ function runCalculusLab() {
   // 5. Con trỏ thông minh GeoGebra (Crosshair & Tọa độ trực tiếp trên đường cong khi di chuột)
   if (calcViewport.hoverPx !== null && calcViewport.hoverPy !== null) {
     const hx = (calcViewport.hoverPx - originX) / scale;
-    const hy = evalRealFn(expr, hx);
+    const hy = safeEval(hx);
     if (Number.isFinite(hy)) {
       const snapPy = originY - hy * scale;
-      const hSlope =
-        (evalRealFn(expr, hx + h) - evalRealFn(expr, hx - h)) / (2 * h);
+      const hSlope = (safeEval(hx + h) - safeEval(hx - h)) / (2 * h);
 
-      // Đường gióng nét đứt tới trục Ox, Oy
-      ctx.strokeStyle = isDark ? "rgba(56, 189, 248, 0.45)" : "rgba(2, 132, 199, 0.45)";
+      ctx.strokeStyle = isDark
+        ? "rgba(56, 189, 248, 0.45)"
+        : "rgba(2, 132, 199, 0.45)";
       ctx.lineWidth = 1.2;
       ctx.setLineDash([3, 3]);
       ctx.beginPath();
@@ -989,7 +1187,6 @@ function runCalculusLab() {
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Điểm sáng trên đồ thị
       ctx.fillStyle = "#38bdf8";
       ctx.beginPath();
       ctx.arc(calcViewport.hoverPx, snapPy, 5, 0, Math.PI * 2);
@@ -998,11 +1195,12 @@ function runCalculusLab() {
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      // Thẻ HUD tọa độ trực tiếp góc dưới trái
       const hudText = `P(${formatNum(hx)}, ${formatNum(hy)})${Number.isFinite(hSlope) ? `  |  f'(x) ≈ ${formatNum(hSlope)}` : ""}`;
       ctx.font = "bold 12px monospace";
       const textW = ctx.measureText(hudText).width;
-      ctx.fillStyle = isDark ? "rgba(15, 23, 42, 0.9)" : "rgba(255, 255, 255, 0.92)";
+      ctx.fillStyle = isDark
+        ? "rgba(15, 23, 42, 0.9)"
+        : "rgba(255, 255, 255, 0.92)";
       ctx.fillRect(10, height - 34, textW + 18, 24);
       ctx.strokeStyle = "#38bdf8";
       ctx.lineWidth = 1;
@@ -1012,27 +1210,48 @@ function runCalculusLab() {
     }
   }
 
-  // 6. Tính tích phân xác định bằng quy tắc Simpson (n = 200)
+  // 6. Tính tích phân xác định bằng quy tắc Simpson (n = 200, tự né cận biên suy rộng)
   const n = 200;
-  const step = (b - a) / n;
-  let sum = evalRealFn(expr, a) + evalRealFn(expr, b);
+  const eps = (b - a) * 1e-6;
+  const safeA = Number.isFinite(safeEval(a)) ? a : a + eps;
+  const safeB = Number.isFinite(safeEval(b)) ? b : b - eps;
+  const step = (safeB - safeA) / n;
+  let sum = safeEval(safeA) + safeEval(safeB);
   for (let i = 1; i < n; i++) {
-    sum += (i % 2 === 0 ? 2 : 4) * evalRealFn(expr, a + i * step);
+    sum += (i % 2 === 0 ? 2 : 4) * safeEval(safeA + i * step);
   }
   const integral = (step / 3) * sum;
-
   if (out) {
     const intercept = y0 - slope * x0;
     const signStr =
       intercept >= 0
         ? `+ ${formatNum(intercept)}`
         : `- ${formatNum(Math.abs(intercept))}`;
+    const domainWarn = runtimeError
+      ? `<div style="color:var(--danger); margin-bottom:6px;">⚠️ Lỗi thực thi hàm số: <code>${runtimeError}</code></div>`
+      : plottedCount === 0
+        ? `<div style="color:#f59e0b; margin-bottom:6px;">⚠️ Hàm số không có điểm xác định nào trong vùng nhìn hiện tại (thử bấm <strong>Về gốc O</strong> hoặc kéo khung nhìn sang miền xác định).</div>`
+        : "";
     out.innerHTML = `
+      ${domainWarn}
       <div style="margin-bottom:6px;">• <strong>Giá trị hàm tại x₀ = ${x0}:</strong> <code>f(${x0}) = ${Number.isFinite(y0) ? formatNum(y0) : "Không xác định"}</code></div>
       <div style="margin-bottom:6px;">• <strong>Đạo hàm &amp; Tiếp tuyến tại x₀:</strong> <code>f'(${x0}) ≈ ${Number.isFinite(slope) ? formatNum(slope) : "N/A"}</code> &nbsp;|&nbsp; Phương trình: <code>y = ${Number.isFinite(slope) ? formatNum(slope) + "x " + signStr : "N/A"}</code></div>
       <div>• <strong>Tích phân xác định ∫<sub>${a}</sub><sup>${b}</sup> f(x)dx (Simpson):</strong> <code>≈ ${Number.isFinite(integral) ? integral.toFixed(5) : "Không xác định"}</code></div>
       ${taylorInfoHtml}
     `;
+  }
+
+  // 7. Vẽ lớp phủ đa thức Taylor-Maclaurin (n -> ∞) trực tiếp lên frame hiện tại
+  if (hasAdvancedTaylor) {
+    window.renderTaylorOverlay(ctx, {
+      scale,
+      originX,
+      originY,
+      width,
+      height,
+      expr,
+      x0,
+    });
   }
 }
 
@@ -1087,7 +1306,7 @@ function renderMatrixGrid() {
   ];
 
   container.style.display = "grid";
-  container.style.gridTemplateColumns = `repeat(${cols}, minmax(48px, 1fr))`;
+  container.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
   container.style.gap = "8px";
 
   let html = "";
@@ -1383,7 +1602,7 @@ function renderSystemGrid(customMatrix = null) {
   ];
 
   container.style.display = "grid";
-  container.style.gridTemplateColumns = `repeat(${n + 1}, minmax(48px, 1fr))`;
+  container.style.gridTemplateColumns = `repeat(${n + 1}, minmax(0, 1fr))`;
   container.style.gap = "8px";
 
   let html = "";
@@ -2087,8 +2306,42 @@ function generateSectionExercise(topicId, secIdx) {
   };
 }
 
+function exposeMathLabGlobals() {
+  window.evalRealFn = evalRealFn;
+  window.runCalculusLab = runCalculusLab;
+  window.setCalcPreset = setCalcPreset;
+  window.onCalcFuncInput = onCalcFuncInput;
+  window.onTaylorPresetChange = onTaylorPresetChange;
+  window.toggleTaylorAnimation = toggleTaylorAnimation;
+  window.insertCalcLatex = insertCalcLatex;
+  window.zoomCalculusLab = zoomCalculusLab;
+  window.resetCalculusViewport = resetCalculusViewport;
+  window.exportCalculusPNG = exportCalculusPNG;
+  window.switchCalcViewMode = switchCalcViewMode;
+  window.initGraphLabUI = initGraphLabUI;
+}
+
+exposeMathLabGlobals();
+
 document.addEventListener("DOMContentLoaded", () => {
+  exposeMathLabGlobals();
   initGraphLabUI();
   initMatrixLabUI();
   initSystemLabUI();
+
+  const canvas = document.getElementById("calc-canvas");
+  if (canvas && typeof ResizeObserver !== "undefined" && canvas.parentElement) {
+    const ro = new ResizeObserver(() => {
+      if (canvas.offsetParent !== null) {
+        runCalculusLab();
+      }
+    });
+    ro.observe(canvas.parentElement);
+  }
+});
+
+window.addEventListener("load", () => {
+  exposeMathLabGlobals();
+  initGraphLabUI();
+  runCalculusLab();
 });

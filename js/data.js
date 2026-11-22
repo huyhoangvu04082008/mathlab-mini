@@ -839,7 +839,7 @@ const EXAM_BANK = {
 
 const AI_LESSON_BLUEPRINT = {
   universityStandard: "HCMUE — Giải tích 1 & Đại số tuyến tính (COMP1800)",
-  defaultModel: "gemini-2.5-pro",
+  defaultModel: "gemini-3.8-flash",
   supportedSubjects: [
     "Giải tích 1",
     "Đại số tuyến tính",
@@ -853,5 +853,343 @@ const AI_LESSON_BLUEPRINT = {
     "Chứng minh không gian con bắt buộc chỉ ra vector không thuộc tập con trước.",
   ],
 };
+
+/* ==========================================================================
+   BỘ QUẢN LÝ & NÂNG CẤP NGÂN HÀNG HỌC LIỆU TỪ TÀI LIỆU ĐÓNG GÓP (AI CURATOR)
+   ========================================================================== */
+const MathLabDataManager = (function () {
+  const STORAGE_KEY = "mathlab_ai_contributed_bank_v1";
+
+  function normalizeText(str) {
+    return String(str || "")
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
+  function loadAll() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      console.warn("[MathLabDataManager] Lỗi đọc localStorage:", e);
+      return [];
+    }
+  }
+
+  function saveAll(list) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    } catch (e) {
+      console.error("[MathLabDataManager] Lỗi lưu localStorage:", e);
+    }
+  }
+
+  // Chuẩn hóa khung lời giải tự luận theo đúng style .rubric-box của gt-c1
+  function buildRubricHtml(item) {
+    if (item.solution && String(item.solution).includes("rubric-box")) {
+      return item.solution;
+    }
+    const steps = Array.isArray(item.steps) ? item.steps : [];
+    let html = '<div class="rubric-box">';
+    if (steps.length > 0) {
+      steps.forEach((st, idx) => {
+        const tag = st.tag || `Bước ${idx + 1}`;
+        const detail = st.detail || "";
+        html += `<div class="rubric-step"><span class="rubric-tag">${tag}</span> ${detail}</div>`;
+      });
+    } else if (item.solution) {
+      html += `<div class="rubric-step"><span class="rubric-tag">Lời giải chi tiết</span> ${item.solution}</div>`;
+    }
+    if (item.trap) {
+      html += `<div class="rubric-trap">⚠️ <b>Lỗi mất điểm tự luận:</b> ${item.trap}</div>`;
+    }
+    html += "</div>";
+    return html;
+  }
+
+  // Tự động gộp dữ liệu AI đóng góp vào DEFAULT_TOPICS và EXAM_BANK khi tải trang
+  function mergeIntoRuntime() {
+    const items = loadAll();
+    if (!items.length || typeof DEFAULT_TOPICS === "undefined") return;
+
+    items.forEach((entry) => {
+      const topic = DEFAULT_TOPICS.find((t) => t.id === entry.topicId);
+      if (!topic) return;
+
+      const sourceBadge = entry.sourceTitle
+        ? ` <span style="font-size:0.75rem;opacity:0.75;">(Nguồn đóng góp: ${entry.sourceTitle})</span>`
+        : "";
+
+      if (entry.type === "theory" && entry.data) {
+        topic.theory = topic.theory || [];
+        const normHead = normalizeText(entry.data.heading);
+        const exists = topic.theory.some(
+          (u) => normalizeText(u.heading) === normHead,
+        );
+        if (!exists && normHead) {
+          topic.theory.push({
+            heading: entry.data.heading,
+            content: (entry.data.content || "") + sourceBadge,
+            checkpoint: entry.data.checkpoint || null,
+            _aiContributedId: entry.id,
+          });
+        }
+      } else if (entry.type === "exercise" && entry.data) {
+        topic.exercises = topic.exercises || [];
+        const normQ = normalizeText(entry.data.question);
+        const exists = topic.exercises.some(
+          (ex) => normalizeText(ex.question) === normQ,
+        );
+        if (!exists && normQ) {
+          topic.exercises.push({
+            level: entry.data.level || "Vừa",
+            question: entry.data.question + sourceBadge,
+            solution: buildRubricHtml(entry.data),
+            _aiContributedId: entry.id,
+          });
+        }
+      } else if (entry.type === "quiz" && entry.data) {
+        topic.quiz = topic.quiz || [];
+        const normQ = normalizeText(entry.data.question);
+        const exists = topic.quiz.some(
+          (qz) => normalizeText(qz.question) === normQ,
+        );
+        if (!exists && normQ && Array.isArray(entry.data.options)) {
+          const quizObj = {
+            question: entry.data.question,
+            options: entry.data.options.slice(0, 4),
+            answer:
+              typeof entry.data.answer === "number" ? entry.data.answer : 0,
+            explanation:
+              (entry.data.explanation || "") +
+              (entry.sourceTitle ? ` [Nguồn: ${entry.sourceTitle}]` : ""),
+            _aiContributedId: entry.id,
+          };
+          topic.quiz.push(quizObj);
+
+          // Đồng bộ luôn vào Phòng Thi Bấm Giờ (EXAM_BANK) nếu chương có đề thi
+          if (typeof EXAM_BANK !== "undefined" && EXAM_BANK[entry.topicId]) {
+            const examExists = EXAM_BANK[entry.topicId].mcqs.some(
+              (m) => normalizeText(m.question) === normQ,
+            );
+            if (!examExists) {
+              EXAM_BANK[entry.topicId].mcqs.push(quizObj);
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Nhận gói dữ liệu AI vừa đọc từ tài liệu đóng góp và lưu + merge nóng
+  function addContributedBundle(bundle) {
+    if (!bundle || !bundle.topicId) {
+      return { addedTheory: 0, addedExercise: 0, addedQuiz: 0, skipped: 0 };
+    }
+
+    const current = loadAll();
+    const topicId = bundle.topicId;
+    const sourceTitle = (bundle.sourceTitle || "Tài liệu cộng đồng").trim();
+    const now = Date.now();
+    let addedTheory = 0;
+    let addedExercise = 0;
+    let addedQuiz = 0;
+    let skipped = 0;
+
+    const topic =
+      typeof DEFAULT_TOPICS !== "undefined"
+        ? DEFAULT_TOPICS.find((t) => t.id === topicId)
+        : null;
+
+    // 1. Bổ sung mục lý thuyết mới (nếu tài liệu có kiến thức/mẹo hay)
+    if (Array.isArray(bundle.theories)) {
+      bundle.theories.forEach((th, idx) => {
+        const norm = normalizeText(th.heading);
+        if (!norm) return;
+        const dupInStore = current.some(
+          (c) =>
+            c.topicId === topicId &&
+            c.type === "theory" &&
+            normalizeText(c.data?.heading) === norm,
+        );
+        const dupInTopic = topic?.theory?.some(
+          (u) => normalizeText(u.heading) === norm,
+        );
+        if (dupInStore || dupInTopic) {
+          skipped++;
+          return;
+        }
+        current.push({
+          id: `ai_th_${now}_${idx}`,
+          topicId,
+          type: "theory",
+          sourceTitle,
+          createdAt: now,
+          data: th,
+        });
+        addedTheory++;
+      });
+    }
+
+    // 2. Bổ sung bài tập tự luận
+    if (Array.isArray(bundle.exercises)) {
+      bundle.exercises.forEach((ex, idx) => {
+        const norm = normalizeText(ex.question);
+        if (!norm) return;
+        const dupInStore = current.some(
+          (c) =>
+            c.topicId === topicId &&
+            c.type === "exercise" &&
+            normalizeText(c.data?.question) === norm,
+        );
+        const dupInTopic = topic?.exercises?.some(
+          (e) => normalizeText(e.question) === norm,
+        );
+        if (dupInStore || dupInTopic) {
+          skipped++;
+          return;
+        }
+        current.push({
+          id: `ai_ex_${now}_${idx}`,
+          topicId,
+          type: "exercise",
+          sourceTitle,
+          createdAt: now,
+          data: {
+            level: ex.level || "Vừa",
+            question: ex.question,
+            solution: buildRubricHtml(ex),
+          },
+        });
+        addedExercise++;
+      });
+    }
+
+    // 3. Bổ sung câu hỏi trắc nghiệm
+    if (Array.isArray(bundle.quizzes)) {
+      bundle.quizzes.forEach((qz, idx) => {
+        const norm = normalizeText(qz.question);
+        if (!norm || !Array.isArray(qz.options) || qz.options.length < 2)
+          return;
+        const dupInStore = current.some(
+          (c) =>
+            c.topicId === topicId &&
+            c.type === "quiz" &&
+            normalizeText(c.data?.question) === norm,
+        );
+        const dupInTopic = topic?.quiz?.some(
+          (q) => normalizeText(q.question) === norm,
+        );
+        if (dupInStore || dupInTopic) {
+          skipped++;
+          return;
+        }
+        current.push({
+          id: `ai_qz_${now}_${idx}`,
+          topicId,
+          type: "quiz",
+          sourceTitle,
+          createdAt: now,
+          data: {
+            question: qz.question,
+            options: qz.options.slice(0, 4),
+            answer: typeof qz.answer === "number" ? qz.answer : 0,
+            explanation: qz.explanation || "",
+          },
+        });
+        addedQuiz++;
+      });
+    }
+
+    saveAll(current);
+    mergeIntoRuntime();
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("mathlab:data-updated", {
+          detail: { topicId, addedTheory, addedExercise, addedQuiz, skipped },
+        }),
+      );
+    }
+
+    return { addedTheory, addedExercise, addedQuiz, skipped };
+  }
+
+  // Xuất code JS chuẩn KaTeX (tự escape dấu \\) để dán vĩnh viễn vào data-gt1.js / data-dstt.js
+  function exportJSCode(filterTopicId = "") {
+    const items = loadAll().filter(
+      (x) => !filterTopicId || x.topicId === filterTopicId,
+    );
+    if (!items.length) {
+      return "// Chưa có dữ liệu AI đóng góp nào được lưu.";
+    }
+
+    const theories = items
+      .filter((x) => x.type === "theory")
+      .map((x) => x.data);
+    const exercises = items
+      .filter((x) => x.type === "exercise")
+      .map((x) => x.data);
+    const quizzes = items.filter((x) => x.type === "quiz").map((x) => x.data);
+
+    let out = `// === DỮ LIỆU BỔ SUNG TỪ TÀI LIỆU ĐÓNG GÓP (${filterTopicId || "TẤT CẢ CHƯƠNG"}) ===\n`;
+    if (theories.length) {
+      out += `// 1. Dán thêm vào mảng theory: [...]\n${JSON.stringify(theories, null, 2).slice(1, -1)},\n\n`;
+    }
+    if (exercises.length) {
+      out += `// 2. Dán thêm vào mảng exercises: [...]\n${JSON.stringify(exercises, null, 2).slice(1, -1)},\n\n`;
+    }
+    if (quizzes.length) {
+      out += `// 3. Dán thêm vào mảng quiz: [...]\n${JSON.stringify(quizzes, null, 2).slice(1, -1)},\n`;
+    }
+    return out;
+  }
+
+  function removeItem(itemId) {
+    const filtered = loadAll().filter((x) => x.id !== itemId);
+    saveAll(filtered);
+  }
+
+  function clearAll() {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+
+  function getStats() {
+    const items = loadAll();
+    const theory = items.filter((x) => x.type === "theory").length;
+    const exercise = items.filter((x) => x.type === "exercise").length;
+    const quiz = items.filter((x) => x.type === "quiz").length;
+    return {
+      total: items.length,
+      theory,
+      exercise,
+      quiz,
+      totalTheories: theory,
+      totalExercises: exercise,
+      totalQuizzes: quiz,
+      items,
+    };
+  }
+
+  return {
+    loadAll,
+    mergeIntoRuntime,
+    addContributedBundle,
+    exportJSCode,
+    removeItem,
+    clearAll,
+    getStats,
+  };
+})();
+
+// Tự động gộp ngay dữ liệu đóng góp đã lưu vào kho học liệu khi mở web
+MathLabDataManager.mergeIntoRuntime();
+
+if (typeof window !== "undefined") {
+  window.MathLabDataManager = MathLabDataManager;
+}
 
 const DATA_SCHEMA_VERSION = "mathlab_topics_v6_ai";

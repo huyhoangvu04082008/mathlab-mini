@@ -196,10 +196,11 @@ function renderMath(targetEl = document.body) {
         ],
         throwOnError: false,
       });
+      return true;
     }
+    return false;
   };
-  doRender();
-  setTimeout(doRender, 150);
+  if (!doRender()) setTimeout(doRender, 150);
 }
 
 function initTheme() {
@@ -647,6 +648,36 @@ function getTopics() {
             merged.keySummary = def.keySummary;
             needsCacheHeal = true;
           }
+          // Đồng bộ các mục Lý thuyết, Bài tự luận, Quiz mới được AI/cộng đồng nạp vào DEFAULT_TOPICS
+          if (def) {
+            const syncUnique = (baseList, defList, keyFn) => {
+              const res = Array.isArray(baseList) ? [...baseList] : [];
+              const seen = new Set(res.map((x) => keyFn(x).trim()));
+              (defList || []).forEach((item) => {
+                const k = keyFn(item).trim();
+                if (k && !seen.has(k)) {
+                  seen.add(k);
+                  res.push(item);
+                }
+              });
+              return res;
+            };
+            merged.theory = syncUnique(
+              merged.theory,
+              def.theory,
+              (x) => x.heading || "",
+            );
+            merged.exercises = syncUnique(
+              merged.exercises,
+              def.exercises,
+              (x) => x.question || "",
+            );
+            merged.quiz = syncUnique(
+              merged.quiz,
+              def.quiz,
+              (x) => x.question || "",
+            );
+          }
           return merged;
         });
         if (needsCacheHeal) {
@@ -1037,12 +1068,57 @@ function regenerateSingleSectionExercise(secIdx) {
   }
 }
 
-function markExerciseSolved(btn) {
+function markExerciseSolved(btn, topicId = activeStudyTopicId, secIdx = null) {
   if (btn.disabled) return;
   btn.disabled = true;
   btn.textContent = "✅ Đã hoàn thành (+15 XP)";
   btn.classList.remove("btn-primary");
   btn.classList.add("btn-outline");
+
+  // 1. Lưu vĩnh viễn trạng thái vào mathlab_completed_sections_v1
+  const topic = getTopics().find(
+    (t) => t.id === (topicId || activeStudyTopicId),
+  );
+  if (topic && secIdx !== null) {
+    const secKey =
+      typeof secIdx === "string" && secIdx.startsWith("extra-")
+        ? `chap_${topic.title}::${secIdx}`
+        : `chap_${topic.title}::unit-sec-${secIdx}`;
+
+    try {
+      const completedSections = JSON.parse(
+        localStorage.getItem("mathlab_completed_sections_v1") || "{}",
+      );
+      completedSections[secKey] = true;
+      localStorage.setItem(
+        "mathlab_completed_sections_v1",
+        JSON.stringify(completedSections),
+      );
+    } catch (_) {}
+
+    // 2. Đồng bộ ngay ra thanh tiến độ (%) trên thẻ Card ngoài trang chủ
+    if (typeof window.refreshMathLabProgress === "function") {
+      window.refreshMathLabProgress();
+    } else if (window.MathLabUpgrades?.injectProgressBarsOnCards) {
+      window.MathLabUpgrades.injectProgressBarsOnCards();
+    }
+
+    // 3. Cập nhật ngay ô số mục lục bên phải modal chuyển màu xanh
+    const pill = document.querySelector(
+      `.ml-sec-pill[data-target-id="unit-sec-${secIdx}"]`,
+    );
+    if (pill) pill.classList.add("is-done");
+    const badge = document.getElementById("ml-sidebar-progress-badge");
+    if (badge) {
+      const totalPills = document.querySelectorAll(".ml-sec-pill").length;
+      const donePills = document.querySelectorAll(
+        ".ml-sec-pill.is-done",
+      ).length;
+      badge.textContent = `${donePills}/${totalPills} xong`;
+    }
+  }
+
+  // 4. Cộng XP và lưu hồ sơ người dùng
   const prog = getProgress();
   prog.solvedExercises = (prog.solvedExercises || 0) + 1;
   saveProgress(prog);
@@ -1095,6 +1171,15 @@ function switchStudyTab(tab) {
         }
 
         const pairedEx = topic.exercises[idx] || topic.exercises[0];
+        // Đọc trạng thái đã giải trước đó từ storage
+        let isDone = false;
+        try {
+          const savedMap = JSON.parse(
+            localStorage.getItem("mathlab_completed_sections_v1") || "{}",
+          );
+          isDone = !!savedMap[`chap_${topic.title}::unit-sec-${idx}`];
+        } catch (_) {}
+
         const practiceHTML = pairedEx
           ? `
             <div class="sub-block-practice">
@@ -1108,7 +1193,11 @@ function switchStudyTab(tab) {
               <p id="sec-ex-q-${idx}" style="font-weight:600; margin-bottom:10px;">${pairedEx.question}</p>
               <div style="display:flex; flex-wrap:wrap; gap:8px;">
                 <button type="button" class="btn btn-sm btn-outline" onclick="toggleSolution('sec-ex-sol-${idx}')">👁️ Xem Barem chấm tự luận</button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="markExerciseSolved(this)">✔️ Đã tự giải xong (+15 XP)</button>
+                ${
+                  isDone
+                    ? `<button type="button" class="btn btn-sm btn-outline" disabled>✅ Đã hoàn thành (+15 XP)</button>`
+                    : `<button type="button" class="btn btn-sm btn-primary" onclick="markExerciseSolved(this, '${topic.id}', ${idx})">✔️ Đã tự giải xong (+15 XP)</button>`
+                }
               </div>
               <div class="solution-box" id="sec-ex-sol-${idx}">
                 ${pairedEx.solution}
@@ -1227,8 +1316,11 @@ function switchStudyTab(tab) {
 function toggleSolution(elId) {
   const el = document.getElementById(elId);
   if (el) {
-    el.classList.toggle("open");
-    renderMath(el);
+    const isOpening = el.classList.toggle("open");
+    if (isOpening && el.dataset.mathRendered !== "1") {
+      el.dataset.mathRendered = "1";
+      renderMath(el);
+    }
   }
 }
 
@@ -1755,7 +1847,6 @@ document.addEventListener("DOMContentLoaded", () => {
   renderXPWidget();
   renderFeaturedTopics();
   renderTopicsGrid();
-  renderCommunityHub();
   initAuthPage();
   renderMath(document.body);
 });
@@ -2126,8 +2217,12 @@ async function gradeEssayPhotoWithAI() {
   const resultBox = document.getElementById("ai-grade-result-box");
   const btn = document.getElementById("ai-grade-btn");
   const exam = EXAM_BANK[activeExamId];
+  if (!resultBox || !exam) return;
+
   const apiKey = (
-    document.getElementById("gemini-api-key-input")?.value || ""
+    document.getElementById("gemini-api-key-input")?.value ||
+    window.PikeManAI?.getApiKey?.() ||
+    ""
   ).trim();
 
   if (!activeExamPhotoBase64) {
@@ -2153,7 +2248,7 @@ async function gradeEssayPhotoWithAI() {
   }
 
   try {
-    const promptText = `Bạn là giảng viên Toán Cao Cấp tại Trường ĐH Sư phạm TP.HCM (HCMUE). Hãy đọc ảnh bài giải tự luận viết tay của sinh viên, đối chiếu với đề bài và barem chấm điểm dưới đây, sau đó nhận xét chi tiết bằng tiếng Việt (dùng ký hiệu LaTeX $...$):
+    const promptText = `Bạn là giảng viên Toán Cao Cấp tại Trường ĐH Sư phạm TP.HCM (HCMUE). Hãy đọc ảnh bài giải tự luận viết tay của sinh viên, đối chiếu với đề bài và barem chấm điểm dưới đây, sau đó nhận xét chi tiết bằng tiếng Việt (luôn bọc công thức toán bằng $...$ hoặc $$...$$):
 1. Tóm tắt các bước sinh viên đã làm được trong ảnh.
 2. Chỉ rõ từng lỗi sai biến đổi, thiếu điều kiện hoặc nhầm dấu (nếu có).
 3. Chấm điểm từng ý theo barem và tổng kết điểm số phần tự luận.
@@ -2164,42 +2259,82 @@ ${exam.essay.prompt}
 BAREM CHUẨN:
 ${exam.essay.rubric}`;
 
-    const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: promptText },
-                {
-                  inline_data: {
-                    mime_type: activeExamPhotoMime,
-                    data: activeExamPhotoBase64,
-                  },
-                },
-              ],
-            },
-          ],
-        }),
-      },
-    );
+    let aiReply = "";
+    let modelUsed = "gemini-3.8-flash";
 
-    const json = await resp.json();
-    if (!resp.ok) {
-      throw new Error(json?.error?.message || "Lỗi kết nối Gemini API");
+    if (window.PikeManAI && typeof window.PikeManAI.generate === "function") {
+      const res = await window.PikeManAI.generate({
+        prompt: promptText,
+        images: [
+          {
+            mimeType: activeExamPhotoMime,
+            base64: activeExamPhotoBase64,
+          },
+        ],
+        temperature: 0.2,
+        onStatus: (activeModel, idx) => {
+          if (btn) {
+            btn.textContent =
+              idx === 0
+                ? `⏳ AI (${activeModel}) đang đọc bài viết tay...`
+                : `⏳ Model bận, tự chuyển sang ${activeModel}...`;
+          }
+        },
+      });
+      aiReply = res.text;
+      modelUsed = res.modelUsed || modelUsed;
+    } else {
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelUsed}:generateContent?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: promptText },
+                  {
+                    inline_data: {
+                      mime_type: activeExamPhotoMime,
+                      data: activeExamPhotoBase64,
+                    },
+                  },
+                ],
+              },
+            ],
+          }),
+        },
+      );
+
+      const json = await resp.json();
+      if (!resp.ok) {
+        throw new Error(json?.error?.message || "Lỗi kết nối Gemini API");
+      }
+
+      aiReply =
+        json?.candidates?.[0]?.content?.parts
+          ?.map((p) => p.text || "")
+          .join("") || "";
     }
 
-    const aiReply =
-      json?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "AI không trích xuất được nội dung từ ảnh, vui lòng chụp rõ nét hơn.";
+    if (!aiReply) {
+      aiReply =
+        "AI không trích xuất được nội dung từ ảnh, vui lòng chụp rõ nét hơn.";
+    }
+
+    const formattedReply = escapeHTML(aiReply)
+      .replace(/\\\[([\s\S]*?)\\\]/g, (_, m) => `$$${m}$$`)
+      .replace(/\\\(([\s\S]*?)\\\)/g, (_, m) => `$${m}$`)
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
 
     resultBox.innerHTML = `
       <div class="ai-feedback-result">
-        <div style="font-weight:800; color:var(--secondary); margin-bottom:8px;">🤖 Kết quả chấm tự luận từ AI Vision:</div>
-        <div style="white-space:pre-line;">${escapeHTML(aiReply)}</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+          <span style="font-weight:800; color:var(--secondary);">🤖 Kết quả chấm tự luận từ AI Vision:</span>
+          <span style="font-size:0.78rem; color:var(--text-muted); font-family:var(--font-mono);">Model: ${escapeHTML(modelUsed)}</span>
+        </div>
+        <div style="white-space:pre-line;">${formattedReply}</div>
       </div>
     `;
     renderMath(resultBox);
@@ -2231,19 +2366,35 @@ function renderContributeHub() {
     (sum, arr) => sum + arr.length,
     0,
   );
-  const totalNotes = Object.values(notesMap).reduce(
-    (sum, arr) => sum + arr.length,
-    0,
-  );
+  const aiStats = window.MathLabDataManager
+    ? window.MathLabDataManager.getStats()
+    : { totalExercises: 0, totalQuizzes: 0, totalTheories: 0 };
+  const totalExpanded =
+    Object.values(notesMap).reduce((sum, arr) => sum + arr.length, 0) +
+    aiStats.totalExercises +
+    aiStats.totalQuizzes +
+    aiStats.totalTheories;
+
+  const savedApiKey =
+    localStorage.getItem(STORAGE_KEYS.GEMINI_KEY) ||
+    localStorage.getItem(STORAGE_KEYS.GEMINI_KEY_LEGACY) ||
+    "";
+
+  const topicOptions = getTopics()
+    .map(
+      (t) =>
+        `<option value="${t.id}">${escapeHTML(t.code)} • ${escapeHTML(t.title)}</option>`,
+    )
+    .join("");
 
   container.innerHTML = `
     <div class="contrib-hub-card">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:14px; margin-bottom:20px;">
         <div>
-          <span class="badge badge-linalg" style="margin-bottom:8px;">AUTO-UPGRADE KNOWLEDGE HUB</span>
-          <h2 style="font-size:1.6rem;">🤝 Đóng Góp &amp; Tự Động Nâng Cấp Nguồn Học Liệu</h2>
+          <span class="badge badge-linalg" style="margin-bottom:8px;">AI AUTO-UPGRADE KNOWLEDGE HUB</span>
+          <h2 style="font-size:1.6rem;">🤝 Đóng Góp &amp; AI Tự Động Nâng Cấp Nguồn Học Liệu</h2>
           <p style="color:var(--text-secondary); font-size:0.95rem;">
-            Tải lên slide, đề cương, ảnh tóm tắt hoặc nhập công thức/mẹo giải mới: hệ thống sẽ <strong>tự động phân loại vào đúng chương</strong>, cập nhật kho tài liệu và bổ sung vào mục tổng hợp kiến thức cuối chương.
+            Tải lên <strong>PDF đề thi/giáo trình, ảnh chụp đề bài, file .txt/.md</strong> hoặc nhập công thức mới: <strong>Pike Man AI</strong> sẽ đọc tài liệu, tự phân loại đúng chương, giải chi tiết chuẩn $\\LaTeX$ và nạp câu hỏi Trắc nghiệm + Tự luận thẳng vào kho đề của web.
           </p>
         </div>
         <div style="display:flex; gap:10px;">
@@ -2252,99 +2403,260 @@ function renderContributeHub() {
             <div style="font-size:0.78rem; font-weight:700;">Tài liệu kho</div>
           </div>
           <div style="padding:10px 16px; border-radius:12px; background:var(--secondary-soft); text-align:center;">
-            <div style="font-family:var(--font-mono); font-weight:800; font-size:1.25rem; color:var(--secondary);">${totalNotes}</div>
-            <div style="font-size:0.78rem; font-weight:700;">Công thức mở rộng</div>
+            <div style="font-family:var(--font-mono); font-weight:800; font-size:1.25rem; color:var(--secondary);">${totalExpanded}</div>
+            <div style="font-size:0.78rem; font-weight:700;">Câu hỏi &amp; Mục mở rộng</div>
           </div>
         </div>
       </div>
 
-      <form onsubmit="handleCommunityContribute(event)">
+      <form id="community-contrib-form" onsubmit="handleCommunityContribute(event)">
         <div class="grid-3" style="gap:14px; margin-bottom:14px;">
           <div class="form-group" style="margin-bottom:0;">
-            <label for="contrib-topic-id">Chọn chương đích tự động cập nhật:</label>
+            <label for="contrib-topic-id">Chương đích tự động cập nhật:</label>
             <select id="contrib-topic-id" class="select-control" style="width:100%;">
-              <option value="gt-c1">GT1 • Chương 1: Giới hạn &amp; Liên tục</option>
-              <option value="gt-c2">GT1 • Chương 2: Đạo hàm, Vi phân &amp; Taylor</option>
-              <option value="gt-c3">GT1 • Chương 3: Tích phân &amp; Tích phân suy rộng</option>
-              <option value="gt-c4">GT1 • Chương 4: Chuỗi số &amp; Chuỗi lũy thừa</option>
-              <option value="dstt-c5">ĐSTT • Chương 5: Ma trận &amp; Định thức</option>
-              <option value="dstt-c6">ĐSTT • Chương 6: Hệ Phương trình tuyến tính</option>
-              <option value="dstt-c7">ĐSTT • Chương 7: Không gian Vector &amp; Euclide</option>
+              <option value="auto" selected>🤖 AI tự nhận diện &amp; phân loại đúng chương</option>
+              ${topicOptions}
             </select>
           </div>
           <div class="form-group" style="margin-bottom:0;">
-            <label for="contrib-title">Tên tài liệu / Chủ đề đóng góp:</label>
-            <input type="text" id="contrib-title" class="input-control" style="width:100%;" placeholder="VD: Đề cương ôn tập Chuỗi lũy thừa HCMUE" required>
+            <label for="contrib-title">Tên tài liệu / Nguồn đề đóng góp:</label>
+            <input type="text" id="contrib-title" class="input-control" style="width:100%;" placeholder="VD: Đề thi Giữa kỳ 1 Giải tích HCMUE" required>
           </div>
           <div class="form-group" style="margin-bottom:0;">
-            <label for="contrib-file">Đính kèm file (PDF, DOCX, TXT, Ảnh) — tùy chọn:</label>
-            <input type="file" id="contrib-file" class="input-control" style="width:100%;">
+            <label for="contrib-file">Đính kèm PDF, Ảnh chụp đề, TXT/MD:</label>
+            <input type="file" id="contrib-file" class="input-control" style="width:100%;" accept=".pdf,image/*,.txt,.md,.tex" multiple>
           </div>
         </div>
 
-        <div class="form-group" style="margin-bottom:14px;">
-          <label for="contrib-note">Nội dung tóm tắt, link Drive hoặc công thức $\\LaTeX$ muốn tích hợp tự động vào cuối chương:</label>
-          <textarea id="contrib-note" class="textarea-control" rows="2" style="width:100%;" placeholder="VD: Tiêu chuẩn tích phân Cauchy: nếu $f(x)$ dương, liên tục, giảm trên $[1,+\\infty)$ thì $\\sum f(n)$ và $\\int_1^{+\\infty} f(x)dx$ cùng tính hội tụ." required></textarea>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label for="contrib-note">Nội dung đề bài, ghi chú hoặc công thức $\\LaTeX$ (có thể để trống nếu đã đính kèm file PDF/Ảnh):</label>
+          <textarea id="contrib-note" class="textarea-control" rows="3" style="width:100%;" placeholder="VD: Dán đề bài trắc nghiệm/tự luận hoặc ghi chú định lý tại đây để AI bóc tách &amp; tạo barem lời giải..."></textarea>
+        </div>
+
+        <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border-radius:12px; background:var(--bg-surface-alt); border:1px solid var(--border-color); margin-bottom:14px;">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; font-size:0.9rem; margin:0;">
+            <input type="checkbox" id="contrib-use-ai" checked>
+            <span>🤖 Dùng Pike Man AI đọc tài liệu &amp; tự động tạo câu hỏi Trắc nghiệm + Tự luận có barem</span>
+          </label>
+          <div style="display:flex; align-items:center; gap:8px; min-width:240px; flex:1; max-width:340px;">
+            <input type="password" id="contrib-api-key" class="input-control" style="width:100%; padding:7px 10px; font-size:0.84rem;" placeholder="Gemini API Key (AIzaSy...)" value="${escapeHTML(savedApiKey)}" onchange="syncSharedGeminiKey(this.value)">
+          </div>
         </div>
 
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-          <span style="font-size:0.84rem; color:var(--text-muted);">
-            ⚡ Tự động đồng bộ vào Kho Tài Liệu &amp; Khối Tổng Hợp Cuối Chương ngay sau khi gửi.
+          <span id="contrib-status-text" style="font-size:0.85rem; color:var(--text-muted); font-weight:600;">
+            ⚡ AI tự động bóc tách câu hỏi, chuẩn hóa KaTeX và gộp vào ngân hàng đề của từng chương.
           </span>
-          <button type="submit" class="btn btn-primary">
-            🚀 Đóng góp &amp; Tự động nâng cấp học liệu (+30 XP)
+          <button type="submit" id="contrib-submit-btn" class="btn btn-primary">
+            🚀 Đóng góp &amp; Tự động nâng cấp học liệu (+50 XP)
           </button>
         </div>
       </form>
+
+      <div id="contrib-ai-result-panel" style="margin-top:16px;"></div>
     </div>
   `;
 
   renderMath(container);
 }
 
-function handleCommunityContribute(event) {
+async function handleCommunityContribute(event) {
   event.preventDefault();
   const topicId = document.getElementById("contrib-topic-id").value;
   const title = document.getElementById("contrib-title").value.trim();
   const noteText = document.getElementById("contrib-note").value.trim();
   const fileInput = document.getElementById("contrib-file");
-  const file = fileInput?.files?.[0];
+  const files = Array.from(fileInput?.files || []);
+  const useAI = document.getElementById("contrib-use-ai")?.checked;
+  const apiKey = (
+    document.getElementById("contrib-api-key")?.value || ""
+  ).trim();
+  const submitBtn = document.getElementById("contrib-submit-btn");
+  const statusEl = document.getElementById("contrib-status-text");
+  const resultPanel = document.getElementById("contrib-ai-result-panel");
+
+  if (!files.length && !noteText) {
+    showToast(
+      "Vui lòng đính kèm file (PDF/Ảnh/TXT) hoặc nhập nội dung đóng góp!",
+      "error",
+    );
+    return;
+  }
+
+  if (apiKey) syncSharedGeminiKey(apiKey);
 
   const user = getCurrentUser();
   const authorName = user ? user.name : "Sinh viên HCMUE";
   const today = new Date().toISOString().slice(0, 10);
+  const fallbackTopicId = topicId === "auto" ? "gt-c1" : topicId;
 
-  const docsMap = getAllDocuments();
-  if (!docsMap[topicId]) docsMap[topicId] = [];
-  docsMap[topicId].unshift({
-    id: "doc-contrib-" + Date.now(),
-    title: file ? `${title} (${file.name})` : `${title}.txt`,
-    uploader: authorName,
-    date: today,
-    size: file
-      ? `${Math.max(1, Math.round(file.size / 1024))} KB`
-      : "Ghi chú nhanh",
-    type: file ? (file.name.split(".").pop() || "FILE").toUpperCase() : "NOTE",
-    content: noteText,
-  });
-  saveAllDocuments(docsMap);
+  const saveDocAndNote = (targetTid, summaryText) => {
+    const docsMap = getAllDocuments();
+    if (!docsMap[targetTid]) docsMap[targetTid] = [];
+    docsMap[targetTid].unshift({
+      id: "doc-contrib-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
+      title: files.length
+        ? `${title} (${files.map((f) => f.name).join(", ")})`
+        : `${title}.txt`,
+      uploader: authorName,
+      date: today,
+      size: files.length
+        ? `${Math.max(1, Math.round(files.reduce((s, f) => s + f.size, 0) / 1024))} KB`
+        : "Ghi chú nhanh",
+      type: files.length
+        ? (files[0].name.split(".").pop() || "FILE").toUpperCase()
+        : "NOTE",
+      content: summaryText,
+    });
+    saveAllDocuments(docsMap);
 
-  const notesMap = JSON.parse(
-    localStorage.getItem(STORAGE_KEYS.COMMUNITY_NOTES) || "{}",
+    const notesMap = JSON.parse(
+      localStorage.getItem(STORAGE_KEYS.COMMUNITY_NOTES) || "{}",
+    );
+    if (!notesMap[targetTid]) notesMap[targetTid] = [];
+    notesMap[targetTid].unshift({
+      author: authorName,
+      date: today,
+      text: `<strong>${escapeHTML(title)}:</strong> ${escapeHTML(summaryText)}`,
+    });
+    localStorage.setItem(
+      STORAGE_KEYS.COMMUNITY_NOTES,
+      JSON.stringify(notesMap),
+    );
+  };
+
+  // Chế độ AI tự động đọc tài liệu & nâng cấp ngân hàng câu hỏi
+  if (useAI && apiKey && window.PikeManAI) {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "⏳ Pike Man AI đang đọc tài liệu...";
+    }
+    if (statusEl) {
+      statusEl.style.color = "var(--primary)";
+      statusEl.textContent =
+        "⏳ AI đang phân tích file/nội dung, giải chi tiết và chuẩn hóa KaTeX...";
+    }
+
+    try {
+      const extracted = await window.PikeManAI.ingestContributedResource({
+        files,
+        rawText: noteText,
+        targetTopicId: topicId,
+        sourceTitle: title,
+        onStatus: (mod, idx) => {
+          if (statusEl) {
+            statusEl.textContent =
+              idx === 0
+                ? `⏳ Pike Man (${mod}) đang đọc tài liệu & trích xuất câu hỏi...`
+                : `⏳ Đang chuyển sang model dự phòng (${mod})...`;
+          }
+        },
+      });
+
+      const summary = window.PikeManAI.commitExtractedBundles(
+        extracted.bundles,
+      );
+      const affectedTopicIds = Array.from(
+        new Set(
+          (extracted.bundles || []).map((b) => b.topicId).filter(Boolean),
+        ),
+      );
+      const targetList = affectedTopicIds.length
+        ? affectedTopicIds
+        : [fallbackTopicId];
+
+      targetList.forEach((tid) => {
+        saveDocAndNote(
+          tid,
+          noteText ||
+            `Tài liệu "${extracted.sourceTitle}" đã được AI bóc tách tự động (+${summary.totalTheory} lý thuyết, +${summary.totalExercise} tự luận, +${summary.totalQuiz} trắc nghiệm).`,
+        );
+      });
+
+      renderTopicsGrid();
+      renderFeaturedTopics();
+      addXP(50, `AI nâng cấp học liệu từ "${extracted.sourceTitle}"`);
+
+      event.target.reset();
+      const restoredKey =
+        localStorage.getItem(STORAGE_KEYS.GEMINI_KEY) || apiKey;
+      const keyInputAfter = document.getElementById("contrib-api-key");
+      if (keyInputAfter) keyInputAfter.value = restoredKey;
+
+      const topicsMap = new Map(getTopics().map((t) => [t.id, t]));
+      const chapterButtonsHTML = targetList
+        .map((tid) => {
+          const tp = topicsMap.get(tid);
+          const label = tp ? `${tp.code}: ${tp.title}` : tid;
+          return `
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:8px 12px; border-radius:10px; background:var(--bg-surface); border:1px solid var(--border-color);">
+              <strong style="font-size:0.88rem;">📘 ${escapeHTML(label)}</strong>
+              <div style="display:flex; gap:6px;">
+                <button type="button" class="btn btn-sm btn-outline" onclick="openStudyModal('${tid}', 'lesson')">📖 Xem lý thuyết &amp; tự luận</button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="openStudyModal('${tid}', 'quiz')">🎯 Làm Quiz mới nạp</button>
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+
+      if (resultPanel) {
+        resultPanel.innerHTML = `
+          <div style="padding:16px; border-radius:14px; background:var(--secondary-soft); border:1px solid var(--secondary);">
+            <div style="font-weight:800; color:var(--secondary); font-size:1rem; margin-bottom:6px;">
+              🎉 Pike Man AI (${escapeHTML(extracted.modelUsed)}) đã tự động nâng cấp học liệu thành công!
+            </div>
+            <p style="font-size:0.9rem; margin-bottom:10px;">
+              Nguồn <strong>"${escapeHTML(extracted.sourceTitle)}"</strong> đã được nạp vào ngân hàng web:
+              <strong>+${summary.totalTheory} mục lý thuyết</strong> •
+              <strong>+${summary.totalExercise} bài tự luận có barem</strong> •
+              <strong>+${summary.totalQuiz} câu trắc nghiệm</strong>.
+            </p>
+            <div style="display:grid; gap:8px;">
+              ${chapterButtonsHTML}
+            </div>
+          </div>
+        `;
+        renderMath(resultPanel);
+      }
+
+      if (statusEl) {
+        statusEl.style.color = "var(--success)";
+        statusEl.textContent =
+          "✅ Hoàn tất! Toàn bộ câu hỏi mới đã sẵn sàng trong Phòng học & Quiz.";
+      }
+      showToast(
+        `🎉 AI đã nạp +${summary.totalExercise} tự luận & +${summary.totalQuiz} câu trắc nghiệm vào web!`,
+        "success",
+      );
+    } catch (err) {
+      if (statusEl) {
+        statusEl.style.color = "var(--danger)";
+        statusEl.textContent = `⚠️ Lỗi AI: ${err.message}`;
+      }
+      showToast(`Lỗi khi AI đọc tài liệu: ${err.message}`, "error");
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent =
+          "🚀 Đóng góp & Tự động nâng cấp học liệu (+50 XP)";
+      }
+    }
+    return;
+  }
+
+  // Fallback lưu nhanh tài liệu & công thức nếu chưa nhập API key hoặc tắt AI
+  saveDocAndNote(
+    fallbackTopicId,
+    noteText || `Tài liệu đính kèm: ${files.map((f) => f.name).join(", ")}`,
   );
-  if (!notesMap[topicId]) notesMap[topicId] = [];
-  notesMap[topicId].unshift({
-    author: authorName,
-    date: today,
-    text: `<strong>${escapeHTML(title)}:</strong> ${escapeHTML(noteText)}`,
-  });
-  localStorage.setItem(STORAGE_KEYS.COMMUNITY_NOTES, JSON.stringify(notesMap));
-
-  addXP(30, `Đóng góp & nâng cấp học liệu: ${title}`);
+  addXP(30, `Đóng góp học liệu: ${title}`);
   event.target.reset();
   renderContributeHub();
   showToast(
-    "✅ Đã tự động cập nhật tài liệu & kiến thức mới vào chương!",
+    useAI && !apiKey
+      ? "✅ Đã lưu tài liệu vào chương! (Nhập thêm Gemini API Key để AI tự động sinh câu hỏi từ file nhé)"
+      : "✅ Đã tự động cập nhật tài liệu & kiến thức mới vào chương!",
     "success",
   );
 }

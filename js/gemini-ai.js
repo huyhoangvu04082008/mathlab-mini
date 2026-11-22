@@ -236,9 +236,62 @@
       });
     },
 
+    async fileToAttachmentPayload(file) {
+      if (!file) throw new Error("Không có file hợp lệ.");
+      const name = file.name || "tai-lieu";
+      const type = (file.type || "").toLowerCase();
+
+      if (type.startsWith("image/")) {
+        const imgData = await this.fileToImagePayload(file);
+        return { kind: "binary", ...imgData };
+      }
+
+      if (type === "application/pdf" || /\.pdf$/i.test(name)) {
+        if (file.size > 18 * 1024 * 1024) {
+          throw new Error(
+            `File PDF "${name}" nặng quá 18MB, hãy tách nhỏ dưới 18MB để Gemini đọc ổn định nhé!`,
+          );
+        }
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onerror = () =>
+            reject(new Error(`Không đọc được PDF "${name}".`));
+          reader.onload = () => {
+            const raw = String(reader.result || "");
+            const commaIdx = raw.indexOf(",");
+            resolve({
+              kind: "binary",
+              mimeType: "application/pdf",
+              base64: commaIdx !== -1 ? raw.slice(commaIdx + 1) : "",
+              name,
+            });
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      if (
+        type.startsWith("text/") ||
+        /\.(txt|md|tex|csv|json|html)$/i.test(name)
+      ) {
+        const textContent = await file.text();
+        return {
+          kind: "text",
+          mimeType: type || "text/plain",
+          textContent: textContent.slice(0, 60000),
+          name,
+        };
+      }
+
+      throw new Error(
+        `Định dạng "${name}" chưa hỗ trợ trực tiếp. Hãy dùng PDF, Ảnh (JPG/PNG) hoặc file Text/Markdown (.txt, .md)!`,
+      );
+    },
+
     async generate({
       prompt,
       images = [],
+      attachments = [],
       systemInstruction = "",
       jsonMode = false,
       temperature = 0.3,
@@ -253,29 +306,48 @@
         );
       }
 
+      const allFiles = [
+        ...(Array.isArray(images) ? images : []),
+        ...(Array.isArray(attachments) ? attachments : []),
+      ];
+      const hasDocAttachment = allFiles.some(
+        (f) => f && f.mimeType === "application/pdf",
+      );
+
       const activeThinking = thinkingLevel || this.getThinkingLevel();
       const effectiveTimeout =
         timeoutMs ||
-        (activeThinking === "high"
-          ? 45000
-          : activeThinking === "medium"
-            ? 25000
-            : 15000);
+        (hasDocAttachment
+          ? 60000
+          : activeThinking === "high"
+            ? 45000
+            : activeThinking === "medium"
+              ? 25000
+              : 15000);
 
       const userParts = [];
-      if (Array.isArray(images)) {
-        images.forEach((img) => {
-          if (img && img.base64) {
-            userParts.push({
-              inline_data: {
-                mime_type: img.mimeType || "image/jpeg",
-                data: img.base64,
-              },
-            });
-          }
-        });
-      }
-      userParts.push({ text: prompt });
+      const extraTextBlocks = [];
+
+      allFiles.forEach((item) => {
+        if (!item) return;
+        if (item.base64) {
+          userParts.push({
+            inline_data: {
+              mime_type: item.mimeType || "image/jpeg",
+              data: item.base64,
+            },
+          });
+        } else if (item.textContent) {
+          extraTextBlocks.push(
+            `--- NỘI DUNG TỆP ĐÍNH KÈM (${item.name || "tai-lieu"}) ---\n${item.textContent}`,
+          );
+        }
+      });
+
+      const finalPrompt = extraTextBlocks.length
+        ? `${extraTextBlocks.join("\n\n")}\n\n${prompt}`
+        : prompt;
+      userParts.push({ text: finalPrompt });
 
       const preferred = this.getPreferredModel();
       const baseList = [
@@ -430,12 +502,173 @@
     },
 
     parseSafeJSON(rawText) {
-      const cleaned = rawText
+      let cleaned = String(rawText || "")
         .replace(/^```json\s*/i, "")
         .replace(/^```\s*/i, "")
         .replace(/```$/i, "")
         .trim();
-      return JSON.parse(cleaned);
+
+      const firstBrace = cleaned.indexOf("{");
+      const lastBrace = cleaned.lastIndexOf("}");
+      if (firstBrace !== -1 && lastBrace > firstBrace) {
+        cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+      }
+
+      // Bảo vệ các lệnh LaTeX bắt đầu bằng \f, \t, \b, \r, \n viết đơn trong chuỗi JSON
+      const sanitizeLatexEscapes = (str) =>
+        str
+          .replace(
+            /(?<!\\)\\(frac|forall|tan|tanh|theta|tau|times|text|textbf|textit|to|top|triangle|beta|binom|bar|big|begin|neq|nu|nabla|notin|rho|right|rangle|rightarrow|Rightarrow)/g,
+            "\\\\$1",
+          )
+          .replace(/\\(?!["\\/bfnrtu])/g, "\\\\");
+
+      try {
+        return JSON.parse(cleaned);
+      } catch (_) {
+        return JSON.parse(sanitizeLatexEscapes(cleaned));
+      }
+    },
+
+    // AI đọc tài liệu người dùng đóng góp (PDF, Ảnh đề thi, Text) -> bóc tách chuẩn cấu trúc gt-c1
+    async ingestContributedResource({
+      files = [],
+      rawText = "",
+      targetTopicId = "auto",
+      sourceTitle = "",
+      onStatus = null,
+    }) {
+      const attachmentPayloads = [];
+      for (const f of Array.from(files || [])) {
+        const payload = await this.fileToAttachmentPayload(f);
+        attachmentPayloads.push(payload);
+      }
+
+      const cleanText = String(rawText || "").trim();
+      if (!attachmentPayloads.length && !cleanText) {
+        throw new Error(
+          "Bạn chưa chọn file tài liệu (PDF/Ảnh/TXT) hoặc dán nội dung câu hỏi nào!",
+        );
+      }
+
+      const availableTopics =
+        typeof DEFAULT_TOPICS !== "undefined"
+          ? DEFAULT_TOPICS.map(
+              (t) => `- "${t.id}": ${t.code} — ${t.title}`,
+            ).join("\n")
+          : '- "gt-c1": Giới hạn & Liên tục\n- "gt-c2": Đạo hàm & Vi phân\n- "gt-c3": Tích phân\n- "gt-c4": Chuỗi số & Chuỗi hàm\n- "dstt-c5": Ma trận, Định thức & Hệ PTTT\n- "dstt-c7": Không gian vectơ & Euclide';
+
+      const targetRule =
+        targetTopicId && targetTopicId !== "auto"
+          ? `Tất cả nội dung bóc tách phải gán vào topicId = "${targetTopicId}".`
+          : `Tự động phân loại từng mục kiến thức/câu hỏi vào đúng topicId phù hợp nhất trong danh sách chương hiện có của web:\n${availableTopics}`;
+
+      const systemPrompt = `Bạn là Pike Man — Biên tập viên học liệu & Quản trị ngân hàng đề Toán Cao Cấp (chuẩn KaTeX & cấu trúc dữ liệu MathLab Mini — HCMUE).
+Nhiệm vụ: Đọc kỹ toàn bộ tài liệu người dùng đóng góp (PDF, ảnh chụp đề thi/giáo trình, ghi chú hoặc văn bản thô), trích xuất đầy đủ các câu hỏi trắc nghiệm, bài tập tự luận, và các định lý/mẹo giải hay (nếu có) để bổ sung vào kho học liệu của web.
+
+QUY TẮC BẮT BUỘC:
+1. ${targetRule}
+2. Toàn bộ công thức toán học phải chuẩn KaTeX, bọc trong $...$ (inline) hoặc $$...$$ (display). Trong JSON string, mọi dấu gạch chéo ngược LaTeX PHẢI viết đôi (ví dụ: "\\\\frac{1}{2}", "\\\\lim_{x \\\\to 0}", "\\\\mathbb{R}").
+3. Với bài tập tự luận (exercises): tự giải chi tiết và chia rõ từng bước có thang điểm vào mảng "steps", kèm mục "trap" chỉ ra lỗi sinh viên hay mất điểm. Nếu tài liệu gốc đã có lời giải thì chuẩn hóa và kiểm chứng lại tính chính xác.
+4. Với câu hỏi trắc nghiệm (quizzes): phải có đúng 4 phương án trong "options", "answer" là chỉ số nguyên 0, 1, 2 hoặc 3, và "explanation" giải thích rõ cách làm.
+5. Với lý thuyết bổ sung (theories): CHỈ tạo khi tài liệu có định lý, công thức mở rộng hoặc kỹ thuật giải mới đáng giá; nếu tài liệu chỉ thuần đề bài tập thì để mảng "theories": [].
+6. Trả về JSON thuần túy đúng schema sau:
+{
+  "detectedSourceTitle": "Tên gợi ý ngắn gọn cho tài liệu đóng góp",
+  "bundles": [
+    {
+      "topicId": "gt-c1",
+      "theories": [
+        {
+          "heading": "Tên mục kiến thức bổ sung",
+          "content": "Nội dung HTML dùng <b>, <br> và LaTeX $...$",
+          "checkpoint": {
+            "question": "Ví dụ minh họa ngắn",
+            "rubric": [
+              { "step": "Bước 1 (0.5đ)", "detail": "Chi tiết lời giải" },
+              { "step": "Bước 2 (0.5đ)", "detail": "Kết luận" }
+            ],
+            "trap": "Lưu ý tránh sai sót"
+          }
+        }
+      ],
+      "exercises": [
+        {
+          "level": "Cơ bản | Vừa | Khó",
+          "question": "Đề bài tự luận đầy đủ (dùng <br> xuống dòng nếu có nhiều ý a, b, c)",
+          "steps": [
+            { "tag": "Bước 1 (0.5đ)", "detail": "Lời giải chi tiết có LaTeX" },
+            { "tag": "Bước 2 (0.5đ)", "detail": "Kết luận đáp số" }
+          ],
+          "trap": "Lỗi mất điểm tự luận thường gặp"
+        }
+      ],
+      "quizzes": [
+        {
+          "question": "Nội dung câu hỏi trắc nghiệm",
+          "options": ["Phương án A", "Phương án B", "Phương án C", "Phương án D"],
+          "answer": 0,
+          "explanation": "Giải thích chi tiết đáp án đúng"
+        }
+      ]
+    }
+  ]
+}`;
+
+      const userPrompt = `Hãy đọc tài liệu người dùng đóng góp dưới đây và bóc tách thành học liệu chuẩn cho MathLab Mini.
+- Tên nguồn người dùng nhập: ${sourceTitle || "(Tự đặt tên phù hợp dựa theo tiêu đề tài liệu)"}
+${cleanText ? `\n--- VĂN BẢN / ĐỀ BÀI NGƯỜI DÙNG DÁN VÀO ---\n${cleanText}` : ""}`;
+
+      const { text, modelUsed } = await this.generate({
+        prompt: userPrompt,
+        attachments: attachmentPayloads,
+        systemInstruction: systemPrompt,
+        jsonMode: true,
+        temperature: 0.2,
+        onStatus,
+      });
+
+      const parsed = this.parseSafeJSON(text);
+      const bundles = Array.isArray(parsed.bundles) ? parsed.bundles : [];
+      const finalSourceTitle =
+        (sourceTitle || "").trim() ||
+        parsed.detectedSourceTitle ||
+        (attachmentPayloads[0]?.name
+          ? attachmentPayloads[0].name.replace(/\.[^.]+$/, "")
+          : "Tài liệu đóng góp");
+
+      bundles.forEach((b) => {
+        b.sourceTitle = finalSourceTitle;
+      });
+
+      return {
+        sourceTitle: finalSourceTitle,
+        bundles,
+        modelUsed,
+      };
+    },
+
+    commitExtractedBundles(bundles) {
+      let totalTheory = 0;
+      let totalExercise = 0;
+      let totalQuiz = 0;
+      let totalSkipped = 0;
+
+      (bundles || []).forEach((b) => {
+        if (window.MathLabDataManager) {
+          const res = window.MathLabDataManager.addContributedBundle(b);
+          totalTheory += res.addedTheory;
+          totalExercise += res.addedExercise;
+          totalQuiz += res.addedQuiz;
+          totalSkipped += res.skipped;
+        }
+      });
+
+      if (typeof window.renderTopicsGrid === "function") {
+        window.renderTopicsGrid();
+      }
+
+      return { totalTheory, totalExercise, totalQuiz, totalSkipped };
     },
 
     async createNewChapter({ subject, title, syllabusNotes }) {
@@ -570,6 +803,9 @@ Hãy biên soạn thêm 3 bài tập tự luận MỚI (1 mức Vừa, 2 mức K
           STORAGE_KEYS.PATCHED_TOPICS,
           JSON.stringify(patches),
         );
+        if (typeof window.renderTopicsGrid === "function") {
+          window.renderTopicsGrid();
+        }
         return `Pike Man đã bổ sung ${newEx.length} bài tập tự luận mới vào "${topic.title}"!`;
       }
 
@@ -602,6 +838,9 @@ Hãy tạo thêm 5 câu hỏi trắc nghiệm MỚI (có câu bẫy lý thuyết
           STORAGE_KEYS.PATCHED_TOPICS,
           JSON.stringify(patches),
         );
+        if (typeof window.renderTopicsGrid === "function") {
+          window.renderTopicsGrid();
+        }
         return `Pike Man đã bổ sung ${newQuiz.length} câu Quiz mới vào "${topic.title}"!`;
       }
     },
@@ -933,6 +1172,147 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
         background: #ffffff;
         cursor: pointer;
       }
+      .taylor-controls-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .taylor-slider-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .taylor-slider-row input[type="range"] {
+        flex: 1;
+        min-width: 0;
+        cursor: pointer;
+        accent-color: #f59e0b;
+      }
+      .btn-danger {
+        background: #dc2626 !important;
+        color: #ffffff !important;
+        border-color: #b91c1c !important;
+      }
+      [data-theme="dark"] #pikeman-ai-drawer {
+        background: #0d1526;
+        color: #f1f5f9;
+        border-color: rgba(56, 189, 248, 0.28);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.72);
+      }
+      [data-theme="dark"] .pm-ai-header {
+        background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+        border-bottom: 1px solid rgba(56, 189, 248, 0.22);
+      }
+      [data-theme="dark"] .pm-ai-tabs {
+        background: #09101f;
+        border-bottom-color: #1e293b;
+      }
+      [data-theme="dark"] .pm-ai-tab {
+        color: #94a3b8;
+      }
+      [data-theme="dark"] .pm-ai-tab.active {
+        color: #38bdf8;
+        border-bottom-color: #38bdf8;
+        background: #0d1526;
+      }
+      [data-theme="dark"] .pm-ai-panel {
+        color: #e2e8f0;
+      }
+      [data-theme="dark"] .pm-ai-msg.bot {
+        background: #131e36;
+        border-color: #24334d;
+        color: #e2e8f0;
+      }
+      [data-theme="dark"] .pm-ai-input-bar {
+        background: #09101f;
+        border-top-color: #1e293b;
+      }
+      [data-theme="dark"] .pm-ai-input-bar textarea,
+      [data-theme="dark"] .pm-ai-field,
+      [data-theme="dark"] .pm-mini-select {
+        background: #131e36;
+        border-color: #334155;
+        color: #f8fafc;
+      }
+      [data-theme="dark"] .pm-ai-input-bar textarea::placeholder,
+      [data-theme="dark"] .pm-ai-field::placeholder {
+        color: #64748b;
+      }
+      [data-theme="dark"] .pm-ai-btn.outline,
+      [data-theme="dark"] .pm-img-btn {
+        background: #1e293b;
+        color: #e2e8f0;
+        border-color: #334155;
+      }
+      [data-theme="dark"] .pm-ai-btn.outline:hover,
+      [data-theme="dark"] .pm-img-btn:hover {
+        background: #334155;
+      }
+      [data-theme="dark"] .pm-quick-bar,
+      [data-theme="dark"] .pm-plan-card,
+      [data-theme="dark"] .pm-preview-strip {
+        background: #131e36;
+        border-color: #24334d;
+        color: #e2e8f0;
+      }
+      [data-theme="dark"] .pm-plan-item {
+        color: #e2e8f0;
+        border-bottom-color: #24334d;
+      }
+      [data-theme="dark"] .pm-context-pill {
+        background: rgba(37, 99, 235, 0.16);
+        border-top-color: rgba(56, 189, 248, 0.3);
+        color: #93c5fd;
+      }
+      [data-theme="dark"] #pm-clear-ctx {
+        color: #93c5fd !important;
+      }
+      [data-theme="dark"] .pm-inline-chip {
+        background: rgba(37, 99, 235, 0.16);
+        color: #7dd3fc;
+        border-color: rgba(56, 189, 248, 0.32);
+      }
+      [data-theme="dark"] .pm-inline-chip:hover {
+        background: rgba(37, 99, 235, 0.28);
+      }
+      [data-theme="dark"] #pm-panel-planner .pm-plan-card > div,
+      [data-theme="dark"] #pm-panel-planner .pm-plan-item span:not([style*="line-through"]),
+      [data-theme="dark"] #pm-plan-output > div,
+      [data-theme="dark"] #pm-panel-analyzer .pm-plan-card > div,
+      [data-theme="dark"] #pm-panel-analyzer .pm-plan-card > div > div:first-child,
+      [data-theme="dark"] #pm-panel-analyzer .pm-plan-card b {
+        color: #e2e8f0 !important;
+      }
+      [data-theme="dark"] #pm-panel-analyzer .pm-plan-card > div {
+        border-bottom-color: #24334d !important;
+      }
+      [data-theme="dark"] #pm-panel-analyzer .pm-plan-card > div > div {
+        color: #94a3b8 !important;
+      }
+      [data-theme="dark"] #pm-panel-manager > div:not(#pm-manager-status) {
+        background: #131e36 !important;
+        border-color: #24334d !important;
+        color: #e2e8f0 !important;
+      }
+      [data-theme="dark"] #pm-panel-manager > div:not(#pm-manager-status) > div {
+        color: #cbd5e1 !important;
+      }
+      [data-theme="dark"] #pm-contrib-preview > div {
+        background: #0f172a !important;
+        border-color: #334155 !important;
+        color: #e2e8f0 !important;
+      }
+      [data-theme="dark"] #pm-contrib-checklist label {
+        background: #1e293b !important;
+        border-color: #334155 !important;
+        color: #e2e8f0 !important;
+      }
+      [data-theme="dark"] #pikeman-ai-drawer code {
+        background: rgba(56, 189, 248, 0.14);
+        color: #7dd3fc;
+        padding: 1px 5px;
+        border-radius: 5px;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -1199,8 +1579,21 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
 
       <!-- TAB 4: QUẢN LÝ BÀI HỌC THÔNG MINH -->
       <div class="pm-ai-panel" id="pm-panel-manager">
+        <div style="background:#eff6ff;padding:11px;border-radius:12px;border:1px solid #bfdbfe;">
+          <div style="font-weight:800;font-size:13.2px;color:#1e3a8a;margin-bottom:4px;">📥 1. AI Đọc Tài Liệu Đóng Góp &amp; Nâng Cấp Kho Đề</div>
+          <div style="font-size:11.8px;color:#334155;margin-bottom:8px;">Tải lên <b>PDF đề thi/giáo trình, Ảnh chụp đề, file .txt/.md</b> hoặc dán trực tiếp câu hỏi. AI sẽ tự phân loại chương, giải chi tiết chuẩn KaTeX và nạp vào ngân hàng bài tập.</div>
+          <input id="pm-contrib-source" class="pm-ai-field" placeholder="Tên nguồn đóng góp (VD: Đề thi GK1 HCMUE 2025)" style="margin-bottom:6px;" />
+          <select id="pm-contrib-topic" class="pm-ai-field" style="margin-bottom:6px;">
+            <option value="auto">🤖 Để AI tự nhận diện &amp; phân loại đúng chương</option>
+          </select>
+          <input type="file" id="pm-contrib-files" class="pm-ai-field" accept=".pdf,image/*,.txt,.md,.tex" multiple style="margin-bottom:6px;padding:6px;" />
+          <textarea id="pm-contrib-text" class="pm-ai-field" rows="3" placeholder="Hoặc dán trực tiếp nội dung đề bài / ghi chú đóng góp tại đây..."></textarea>
+          <button type="button" class="pm-ai-btn" id="pm-btn-ingest-contrib" style="width:100%;margin-top:6px;">🚀 AI Phân Tích &amp; Trích Xuất Học Liệu</button>
+          <div id="pm-contrib-preview" style="margin-top:8px;"></div>
+        </div>
+
         <div style="background:#f8fafc;padding:10px;border-radius:12px;border:1px solid #e2e8f0;">
-          <div style="font-weight:700;font-size:13px;margin-bottom:6px;">➕ 1. Tạo Chương / Chuyên đề mới bằng Pike Man</div>
+          <div style="font-weight:700;font-size:13px;margin-bottom:6px;">➕ 2. Tạo Chương / Chuyên đề mới bằng Pike Man</div>
           <select id="pm-new-subject" class="pm-ai-field" style="margin-bottom:6px;">
             <option value="Giải tích 1">Giải tích 1</option>
             <option value="Đại số tuyến tính">Đại số tuyến tính</option>
@@ -1213,7 +1606,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
         </div>
 
         <div style="background:#f8fafc;padding:10px;border-radius:12px;border:1px solid #e2e8f0;">
-          <div style="font-weight:700;font-size:13px;margin-bottom:6px;">⚡ 2. Bổ sung nội dung cho Chương có sẵn</div>
+          <div style="font-weight:700;font-size:13px;margin-bottom:6px;">⚡ 3. Bổ sung nội dung cho Chương có sẵn</div>
           <select id="pm-target-topic" class="pm-ai-field" style="margin-bottom:8px;"></select>
           <div style="display:flex;gap:6px;">
             <button type="button" class="pm-ai-btn secondary" id="pm-btn-add-ex" style="flex:1;">+3 Bài tự luận</button>
@@ -1222,9 +1615,12 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
         </div>
 
         <div style="background:#fffbeb;padding:10px;border-radius:12px;border:1px solid #fde68a;">
-          <div style="font-weight:700;font-size:13px;margin-bottom:4px;">💾 3. Xuất file data.js cho GitHub Pages</div>
-          <div style="font-size:12px;color:#78350f;margin-bottom:6px;">Tải file <code>data.js</code> đã gộp toàn bộ bài Pike Man vừa tạo để đẩy lên repo web tĩnh.</div>
-          <button type="button" class="pm-ai-btn outline" id="pm-btn-export-data" style="width:100%;">⬇️ Tải về data.js mới nhất</button>
+          <div style="font-weight:700;font-size:13px;margin-bottom:4px;">💾 4. Xuất code JS chuẩn KaTeX cho GitHub Pages</div>
+          <div style="font-size:12px;color:#78350f;margin-bottom:6px;">Copy đoạn code JS của các câu AI vừa nạp từ tài liệu đóng góp để dán vĩnh viễn vào <code>data-gt1.js</code> / <code>data-dstt.js</code>.</div>
+          <div style="display:flex;gap:6px;">
+            <button type="button" class="pm-ai-btn outline" id="pm-btn-copy-contrib-js" style="flex:1;">📋 Copy code đóng góp</button>
+            <button type="button" class="pm-ai-btn outline" id="pm-btn-export-data" style="flex:1;">⬇️ Tải data.js</button>
+          </div>
         </div>
 
         <div id="pm-manager-status" style="font-size:12.5px;font-weight:600;color:#0f766e;"></div>
@@ -1265,10 +1661,17 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
 
     const refreshTopicDropdown = () => {
       const sel = document.getElementById("pm-target-topic");
-      if (!sel || typeof DEFAULT_TOPICS === "undefined") return;
-      sel.innerHTML = DEFAULT_TOPICS.map(
+      const contribSel = document.getElementById("pm-contrib-topic");
+      if (typeof DEFAULT_TOPICS === "undefined") return;
+      const optionsHtml = DEFAULT_TOPICS.map(
         (t) => `<option value="${t.id}">${t.code} — ${t.title}</option>`,
       ).join("");
+      if (sel) sel.innerHTML = optionsHtml;
+      if (contribSel) {
+        contribSel.innerHTML =
+          `<option value="auto">🤖 Để AI tự nhận diện &amp; phân loại đúng chương</option>` +
+          optionsHtml;
+      }
     };
     refreshTopicDropdown();
 
@@ -1665,6 +2068,175 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
     document
       .getElementById("pm-btn-export-data")
       .addEventListener("click", () => PikeManAI.exportUpdatedDataJS());
+
+    document
+      .getElementById("pm-btn-copy-contrib-js")
+      .addEventListener("click", async () => {
+        const status = document.getElementById("pm-manager-status");
+        if (!window.MathLabDataManager) {
+          status.style.color = "#dc2626";
+          status.textContent = "⚠️ Chưa nạp MathLabDataManager trong data.js!";
+          return;
+        }
+        const code = window.MathLabDataManager.exportJSCode();
+        try {
+          await navigator.clipboard.writeText(code);
+          status.style.color = "#059669";
+          status.textContent =
+            "✅ Đã copy toàn bộ code JS (chuẩn KaTeX) của dữ liệu đóng góp vào Clipboard!";
+        } catch {
+          status.style.color = "#2563eb";
+          status.textContent =
+            "ℹ️ Trình duyệt chặn clipboard tự động, đã xuất log ra Console (F12).";
+          console.log(code);
+        }
+      });
+
+    document
+      .getElementById("pm-btn-ingest-contrib")
+      .addEventListener("click", async (e) => {
+        const btn = e.target;
+        const status = document.getElementById("pm-manager-status");
+        const previewBox = document.getElementById("pm-contrib-preview");
+        const files = document.getElementById("pm-contrib-files")?.files;
+        const rawText = document.getElementById("pm-contrib-text")?.value || "";
+        const targetTopicId =
+          document.getElementById("pm-contrib-topic")?.value || "auto";
+        const sourceTitle =
+          document.getElementById("pm-contrib-source")?.value || "";
+
+        btn.disabled = true;
+        previewBox.innerHTML = "";
+        status.style.color = "#2563eb";
+        status.textContent =
+          "⏳ Pike Man đang đọc tài liệu đóng góp & bóc tách câu hỏi...";
+
+        try {
+          const result = await PikeManAI.ingestContributedResource({
+            files,
+            rawText,
+            targetTopicId,
+            sourceTitle,
+            onStatus: (mod, idx) => {
+              status.textContent =
+                idx === 0
+                  ? `⏳ Pike Man (${mod}) đang đọc & chuẩn hóa LaTeX tài liệu...`
+                  : `⏳ Đang thử model dự phòng (${mod})...`;
+            },
+          });
+
+          const flatItems = [];
+          result.bundles.forEach((b) => {
+            (b.theories || []).forEach((item) =>
+              flatItems.push({ topicId: b.topicId, kind: "theory", item }),
+            );
+            (b.exercises || []).forEach((item) =>
+              flatItems.push({ topicId: b.topicId, kind: "exercise", item }),
+            );
+            (b.quizzes || []).forEach((item) =>
+              flatItems.push({ topicId: b.topicId, kind: "quiz", item }),
+            );
+          });
+
+          if (!flatItems.length) {
+            status.style.color = "#d97706";
+            status.textContent =
+              "⚠️ AI không tìm thấy câu hỏi hoặc nội dung toán học nào trong tài liệu này.";
+            return;
+          }
+
+          status.style.color = "#0f766e";
+          status.textContent = `✨ AI (${result.modelUsed}) đã trích xuất được ${flatItems.length} mục từ "${result.sourceTitle}". Tick chọn và bấm Duyệt!`;
+
+          const card = document.createElement("div");
+          card.style.cssText =
+            "background:#ffffff;border:1px solid #93c5fd;border-radius:10px;padding:9px;font-size:12px;";
+          card.innerHTML = `
+            <div style="font-weight:700;color:#1e3a8a;margin-bottom:6px;">
+              📋 Xem trước kết quả AI bóc tách (${flatItems.length} mục):
+            </div>
+            <div id="pm-contrib-checklist" style="max-height:210px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
+            <button type="button" id="pm-btn-approve-contrib" class="pm-ai-btn secondary" style="width:100%;">
+              ✅ Duyệt &amp; Nạp vào Ngân hàng Web
+            </button>
+          `;
+
+          const listEl = card.querySelector("#pm-contrib-checklist");
+          flatItems.forEach((entry, idx) => {
+            const labelMap = {
+              theory: "📘 Lý thuyết",
+              exercise: "✍️ Tự luận",
+              quiz: "🔘 Trắc nghiệm",
+            };
+            const titleText =
+              entry.kind === "theory"
+                ? entry.item.heading
+                : entry.item.question;
+
+            const row = document.createElement("label");
+            row.style.cssText =
+              "display:flex;align-items:flex-start;gap:6px;padding:6px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;";
+            row.innerHTML = `
+              <input type="checkbox" data-idx="${idx}" checked style="margin-top:3px;" />
+              <div style="flex:1;line-height:1.45;">
+                <span style="font-weight:700;color:#2563eb;">[${entry.topicId}] ${labelMap[entry.kind]}:</span>
+                <span>${String(titleText || "").slice(0, 140)}${String(titleText || "").length > 140 ? "..." : ""}</span>
+              </div>
+            `;
+            listEl.appendChild(row);
+          });
+
+          previewBox.appendChild(card);
+          renderMathIfAvailable(previewBox);
+
+          card
+            .querySelector("#pm-btn-approve-contrib")
+            .addEventListener("click", () => {
+              const checkedIndices = new Set(
+                Array.from(
+                  card.querySelectorAll('input[type="checkbox"]:checked'),
+                ).map((cb) => parseInt(cb.dataset.idx, 10)),
+              );
+
+              const grouped = {};
+              flatItems.forEach((entry, idx) => {
+                if (!checkedIndices.has(idx)) return;
+                if (!grouped[entry.topicId]) {
+                  grouped[entry.topicId] = {
+                    topicId: entry.topicId,
+                    sourceTitle: result.sourceTitle,
+                    theories: [],
+                    exercises: [],
+                    quizzes: [],
+                  };
+                }
+                if (entry.kind === "theory") {
+                  grouped[entry.topicId].theories.push(entry.item);
+                } else if (entry.kind === "exercise") {
+                  grouped[entry.topicId].exercises.push(entry.item);
+                } else if (entry.kind === "quiz") {
+                  grouped[entry.topicId].quizzes.push(entry.item);
+                }
+              });
+
+              const summary = PikeManAI.commitExtractedBundles(
+                Object.values(grouped),
+              );
+              previewBox.innerHTML = "";
+              document.getElementById("pm-contrib-text").value = "";
+              const fileInput = document.getElementById("pm-contrib-files");
+              if (fileInput) fileInput.value = "";
+
+              status.style.color = "#059669";
+              status.textContent = `🎉 Đã nạp vào kho: +${summary.totalTheory} lý thuyết, +${summary.totalExercise} bài tự luận, +${summary.totalQuiz} câu quiz${summary.totalSkipped ? ` (bỏ qua ${summary.totalSkipped} câu trùng)` : ""}!`;
+            });
+        } catch (err) {
+          status.style.color = "#dc2626";
+          status.textContent = `❌ ${err.message}`;
+        } finally {
+          btn.disabled = false;
+        }
+      });
   }
 
   // -----------------------------------------------------------------------
@@ -1691,8 +2263,9 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
       .trim();
   }
 
-  function attachInlineTutorButtons() {
-    const targets = document.querySelectorAll(
+  function attachInlineTutorButtons(root = document) {
+    if (!root || typeof root.querySelectorAll !== "function") return;
+    const targets = root.querySelectorAll(
       ".exercise-card, .exercise-item, .checkpoint-box, .quiz-question, .rubric-box",
     );
     targets.forEach((card) => {
@@ -1916,23 +2489,35 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
     },
 
     tokenize(expr) {
-      const raw = expr.replace(/\s+/g, "");
+      const raw = String(expr || "")
+        .replace(/\*\*/g, "^")
+        .replace(/\s+/g, "");
       const tokens = [];
       let i = 0;
       while (i < raw.length) {
         const ch = raw[i];
         if (/[0-9.]/.test(ch)) {
           let num = "";
-          while (i < raw.length && /[0-9.eE+-]/.test(raw[i])) {
-            if (
-              (raw[i] === "+" || raw[i] === "-") &&
-              !/[eE]/.test(raw[i - 1] || "")
-            ) {
-              break;
-            }
+          while (i < raw.length && /[0-9.]/.test(raw[i])) {
             num += raw[i++];
           }
-          tokens.push({ type: "num", val: parseFloat(num) });
+          if (/^[eE][+-]?\d/.test(raw.slice(i))) {
+            num += raw[i++];
+            if (raw[i] === "+" || raw[i] === "-") {
+              num += raw[i++];
+            }
+            while (i < raw.length && /[0-9]/.test(raw[i])) {
+              num += raw[i++];
+            }
+          }
+          const parsedNum = parseFloat(num);
+          if (
+            !/^(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(num) ||
+            !Number.isFinite(parsedNum)
+          ) {
+            throw new Error(`Số không hợp lệ: "${num}"`);
+          }
+          tokens.push({ type: "num", val: parsedNum });
         } else if (/[a-zA-Z]/.test(ch)) {
           let id = "";
           while (i < raw.length && /[a-zA-Z0-9_]/.test(raw[i])) {
@@ -1977,7 +2562,11 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
     },
 
     computeJet(expr, x0, N) {
-      const tokens = this.tokenize(expr);
+      const normalizedExpr =
+        typeof window.latexToMathExpr === "function"
+          ? window.latexToMathExpr(expr)
+          : expr;
+      const tokens = this.tokenize(normalizedExpr);
       let pos = 0;
       const peek = () => tokens[pos];
       const consume = () => tokens[pos++];
@@ -2070,6 +2659,11 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
               const { S, C } = this.sinCos(arg);
               return this.div(S, C);
             }
+            case "cot":
+            case "ctg": {
+              const { S, C } = this.sinCos(arg);
+              return this.div(C, S);
+            }
             case "exp":
               return this.exp(arg);
             case "ln":
@@ -2150,7 +2744,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             <div>
               <label for="taylor-x0-input" style="font-size:0.8rem;font-weight:700;display:block;margin-bottom:4px;">Tâm khai triển x₀:</label>
-              <input type="number" step="any" id="taylor-x0-input" class="input-control" value="0" style="width:100%;padding:7px 10px;" />
+              <input type="text" id="taylor-x0-input" class="input-control" value="0" placeholder="VD: 0, 0.5, pi/4" style="width:100%;padding:7px 10px;" />
             </div>
             <div>
               <label for="taylor-n-input" style="font-size:0.8rem;font-weight:700;display:block;margin-bottom:4px;">Bậc đa thức n (tới ∞):</label>
@@ -2184,12 +2778,100 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
     const playBtn = document.getElementById("taylor-play-btn");
     const statsBox = document.getElementById("taylor-live-stats");
 
+    const parseX0Value = (rawStr) => {
+      const clean = String(rawStr || "").trim();
+      if (!clean) return 0;
+      try {
+        const val = TaylorEngine.computeJet(clean, 0, 0)[0];
+        if (Number.isFinite(val)) return val;
+      } catch (_) {}
+      const num = parseFloat(clean);
+      return Number.isFinite(num) ? num : 0;
+    };
+
+    const resolveViewport = (canvas) => {
+      const W = canvas.width;
+      const H = canvas.height;
+      const vp = canvas._mathViewport;
+      if (vp) {
+        if (
+          typeof vp.scale === "number" &&
+          typeof vp.originX === "number" &&
+          typeof vp.originY === "number"
+        ) {
+          return {
+            scaleX: vp.scale,
+            scaleY: vp.scale,
+            originX: vp.originX,
+            originY: vp.originY,
+          };
+        }
+        if (
+          typeof vp.xMin === "number" &&
+          typeof vp.xMax === "number" &&
+          typeof vp.yMin === "number" &&
+          typeof vp.yMax === "number"
+        ) {
+          const scaleX = W / (vp.xMax - vp.xMin);
+          const scaleY = H / (vp.yMax - vp.yMin);
+          return {
+            scaleX,
+            scaleY,
+            originX: -vp.xMin * scaleX,
+            originY: vp.yMax * scaleY,
+          };
+        }
+      }
+      return {
+        scaleX: 40,
+        scaleY: 40,
+        originX: W / 2,
+        originY: H / 2,
+      };
+    };
+
+    let cleanBaseSnapshot = null;
+    let isDrawingOverlay = false;
+
+    const hookCalculusLab = () => {
+      if (
+        typeof window.runCalculusLab === "function" &&
+        !window.runCalculusLab._taylorHooked
+      ) {
+        const origFn = window.runCalculusLab;
+        const wrapped = function () {
+          const res = origFn.apply(this, arguments);
+          cleanBaseSnapshot = null;
+          drawTaylorOverlay(true);
+          return res;
+        };
+        wrapped._taylorHooked = true;
+        window.__origRunCalculusLab = origFn;
+        window.runCalculusLab = wrapped;
+      }
+    };
+
+    hookCalculusLab();
+
     const mainX0 = document.getElementById("calc-x0");
+    let lastMainX0 = mainX0 ? mainX0.value || "0" : "0";
     if (mainX0) {
-      x0Input.value = mainX0.value || "0";
+      x0Input.value = lastMainX0;
       mainX0.addEventListener("input", () => {
+        lastMainX0 = mainX0.value;
         x0Input.value = mainX0.value;
-        triggerFullRedraw();
+        if (!window.runCalculusLab?._taylorHooked) {
+          triggerFullRedraw();
+        }
+      });
+    }
+
+    const calcFuncEl = document.getElementById("calc-func");
+    if (calcFuncEl) {
+      calcFuncEl.addEventListener("input", () => {
+        if (!window.runCalculusLab?._taylorHooked) {
+          triggerFullRedraw();
+        }
       });
     }
 
@@ -2205,38 +2887,59 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
       playBtn.classList.add("btn-primary");
     };
 
-    const drawTaylorOverlay = () => {
-      const canvas = document.getElementById("calc-canvas");
-      const funcInput = document.getElementById("calc-func");
-      if (!canvas || !funcInput) return;
-
-      const expr = funcInput.value.trim();
-      const x0Raw = parseFloat(x0Input.value);
-      const x0 = Number.isFinite(x0Raw) ? x0Raw : 0;
-      const rawN = Math.max(1, Math.floor(parseFloat(nInput.value) || 1));
-      const calcN = Math.min(rawN, 160);
-
-      if (!enableChk.checked) {
-        statsBox.innerHTML =
-          "Đã tắt đường cong xấp xỉ Taylor $T_n(x)$. Tích vào ô phía trên để khảo sát.";
-        renderMathIfAvailable(statsBox);
-        return;
-      }
-
+    const drawTaylorOverlay = (fromBaseRender = false) => {
+      if (isDrawingOverlay) return;
+      isDrawingOverlay = true;
       try {
-        const coeffs = TaylorEngine.computeJet(expr, x0, calcN);
+        hookCalculusLab();
+        const canvas = document.getElementById("calc-canvas");
+        const funcInput = document.getElementById("calc-func");
+        if (!canvas || !funcInput) return;
 
         const ctx = canvas.getContext("2d");
         const W = canvas.width;
         const H = canvas.height;
-        // Dùng chung hệ trục tọa độ với runCalculusLab() để khớp 100% từng pixel
-        const vp = canvas._mathViewport || {
-          scale: 40,
-          originX: W / 2,
-          originY: H / 2,
-        };
-        const toPxX = (x) => vp.originX + x * vp.scale;
-        const toPxY = (y) => vp.originY - y * vp.scale;
+
+        if (
+          fromBaseRender ||
+          !cleanBaseSnapshot ||
+          cleanBaseSnapshot.width !== W ||
+          cleanBaseSnapshot.height !== H
+        ) {
+          cleanBaseSnapshot = ctx.getImageData(0, 0, W, H);
+        } else {
+          ctx.putImageData(cleanBaseSnapshot, 0, 0);
+        }
+
+        if (fromBaseRender && mainX0 && mainX0.value !== lastMainX0) {
+          lastMainX0 = mainX0.value;
+          x0Input.value = mainX0.value || "0";
+        }
+
+        const expr = funcInput.value.trim();
+        const x0 = parseX0Value(x0Input.value);
+        const x0Label = Number(x0.toFixed(4));
+        const rawN = Math.max(1, Math.floor(parseFloat(nInput.value) || 1));
+        const calcN = Math.min(rawN, 160);
+
+        if (!enableChk.checked) {
+          statsBox.innerHTML =
+            "Đã tắt đường cong xấp xỉ Taylor $T_n(x)$. Tích vào ô phía trên để khảo sát.";
+          renderMathIfAvailable(statsBox);
+          return;
+        }
+
+        if (!expr) {
+          statsBox.innerHTML =
+            "Nhập biểu thức hàm số $f(x)$ ở khung trên để bắt đầu khai triển Taylor.";
+          renderMathIfAvailable(statsBox);
+          return;
+        }
+
+        const coeffs = TaylorEngine.computeJet(expr, x0, calcN);
+        const vp = resolveViewport(canvas);
+        const toPxX = (x) => vp.originX + x * vp.scaleX;
+        const toPxY = (y) => vp.originY - y * vp.scaleY;
 
         ctx.save();
         ctx.strokeStyle = "#f59e0b";
@@ -2245,13 +2948,13 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
         ctx.beginPath();
         let started = false;
         for (let px = 0; px <= W; px += 2) {
-          const x = (px - vp.originX) / vp.scale;
+          const x = (px - vp.originX) / vp.scaleX;
           const y = TaylorEngine.evalHorner(coeffs, x, x0);
-          if (!Number.isFinite(y) || Math.abs(y) > 40) {
+          const py = toPxY(y);
+          if (!Number.isFinite(py) || py < -H || py > H * 2) {
             started = false;
             continue;
           }
-          const py = toPxY(y);
           if (!started) {
             ctx.moveTo(px, py);
             started = true;
@@ -2271,27 +2974,45 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
           ctx.fill();
         }
 
-        ctx.fillStyle = "rgba(15, 23, 42, 0.82)";
-        ctx.fillRect(W - 215, 10, 205, 30);
-        ctx.strokeStyle = "#f59e0b";
-        ctx.strokeRect(W - 215, 10, 205, 30);
-        ctx.fillStyle = "#fbbf24";
+        const badgeText = `--- T_${rawN}(x) tại x₀=${x0Label}`;
         ctx.font = "bold 12px 'JetBrains Mono', monospace";
-        ctx.fillText(`--- T_${rawN}(x) tại x₀=${x0}`, W - 205, 29);
+        const badgeW = Math.max(205, ctx.measureText(badgeText).width + 22);
+        ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+        ctx.fillRect(W - badgeW - 10, 10, badgeW, 30);
+        ctx.strokeStyle = "#f59e0b";
+        ctx.strokeRect(W - badgeW - 10, 10, badgeW, 30);
+        ctx.fillStyle = "#fbbf24";
+        ctx.fillText(badgeText, W - badgeW, 29);
         ctx.restore();
 
-        const xTest = x0 + 0.5;
-        const exactVal = TaylorEngine.computeJet(expr, xTest, 0)[0];
-        const approxVal = TaylorEngine.evalHorner(coeffs, xTest, x0);
-        const absErr = Math.abs(exactVal - approxVal);
+        // Tính sai số tại điểm lân cận (tách try/catch để không sập UI nếu gặp điểm kỳ dị)
+        let errorHtml = "Không xác định tại biên kỳ dị";
+        let xTestUsed = Number((x0 + 0.25).toFixed(4));
+        const candidateOffsets = [0.25, -0.25, 0.05, -0.05];
+        for (const delta of candidateOffsets) {
+          const candidateX = Number((x0 + delta).toFixed(4));
+          try {
+            const exactVal = TaylorEngine.computeJet(expr, candidateX, 0)[0];
+            if (Number.isFinite(exactVal)) {
+              const approxVal = TaylorEngine.evalHorner(coeffs, candidateX, x0);
+              const absErr = Math.abs(exactVal - approxVal);
+              xTestUsed = candidateX;
+              errorHtml = Number.isFinite(absErr)
+                ? absErr.toExponential(3)
+                : "Phân kỳ";
+              break;
+            }
+          } catch (_) {}
+        }
 
         const terms = [];
         for (let k = 0; k <= Math.min(calcN, 4); k++) {
           if (Math.abs(coeffs[k]) < 1e-12) continue;
           const cStr = Number(coeffs[k].toFixed(4));
           if (k === 0) terms.push(`${cStr}`);
-          else if (x0 === 0) terms.push(`${cStr}x${k > 1 ? "^" + k : ""}`);
-          else terms.push(`${cStr}(x-${x0})${k > 1 ? "^" + k : ""}`);
+          else if (Math.abs(x0) < 1e-12)
+            terms.push(`${cStr}x${k > 1 ? "^" + k : ""}`);
+          else terms.push(`${cStr}(x-${x0Label})${k > 1 ? "^" + k : ""}`);
         }
         const polyPreview =
           (terms.join(" + ").replace(/\+\s-/g, "- ") || "0") +
@@ -2302,32 +3023,25 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
             rawN > 160 ? "(tính tới 160 số hạng chuẩn double)" : ""
           }</div>
           <div><b>Khai triển:</b> <code>T_${rawN}(x) ≈ ${polyPreview}</code></div>
-          <div><b>Sai số tại x = ${xTest}:</b> <code>|f(${xTest}) - T_${rawN}(${xTest})| = ${
-            Number.isFinite(absErr) ? absErr.toExponential(3) : "Phân kỳ"
-          }</code></div>
+          <div><b>Sai số tại x = ${xTestUsed}:</b> <code>|f(${xTestUsed}) - T_${rawN}(${xTestUsed})| = ${errorHtml}</code></div>
         `;
       } catch (err) {
         statsBox.innerHTML = `<span style="color:#dc2626;">⚠️ ${err.message}</span>`;
+      } finally {
+        isDrawingOverlay = false;
       }
     };
 
     const triggerFullRedraw = () => {
+      hookCalculusLab();
       if (typeof window.__origRunCalculusLab === "function") {
         window.__origRunCalculusLab();
+        cleanBaseSnapshot = null;
+        drawTaylorOverlay(true);
+      } else {
+        drawTaylorOverlay(false);
       }
-      drawTaylorOverlay();
     };
-
-    if (
-      typeof window.runCalculusLab === "function" &&
-      !window.__origRunCalculusLab
-    ) {
-      window.__origRunCalculusLab = window.runCalculusLab;
-      window.runCalculusLab = function () {
-        window.__origRunCalculusLab.apply(this, arguments);
-        drawTaylorOverlay();
-      };
-    }
 
     nInput.addEventListener("input", () => {
       const val = Math.max(1, Math.floor(parseFloat(nInput.value) || 1));
@@ -2335,20 +3049,27 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
         nSlider.max = String(Math.min(val, 200));
       }
       nSlider.value = String(Math.min(val, parseInt(nSlider.max, 10)));
-      triggerFullRedraw();
+      drawTaylorOverlay(false);
     });
 
     nSlider.addEventListener("input", () => {
       nInput.value = nSlider.value;
-      triggerFullRedraw();
+      drawTaylorOverlay(false);
     });
 
     x0Input.addEventListener("input", () => {
-      if (mainX0) mainX0.value = x0Input.value;
+      if (mainX0) {
+        const parsedX0 = parseX0Value(x0Input.value);
+        if (Number.isFinite(parsedX0)) {
+          const syncedVal = String(Number(parsedX0.toFixed(6)));
+          mainX0.value = syncedVal;
+          lastMainX0 = syncedVal;
+        }
+      }
       triggerFullRedraw();
     });
 
-    enableChk.addEventListener("change", triggerFullRedraw);
+    enableChk.addEventListener("change", () => drawTaylorOverlay(false));
 
     playBtn.addEventListener("click", () => {
       if (animTimer) {
@@ -2368,7 +3089,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
           nSlider.max = String(cur);
         }
         nSlider.value = String(Math.min(cur, parseInt(nSlider.max, 10)));
-        triggerFullRedraw();
+        drawTaylorOverlay(false);
       }, 450);
     });
 
@@ -2388,7 +3109,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
       });
     });
 
-    setTimeout(triggerFullRedraw, 120);
+    setTimeout(triggerFullRedraw, 150);
   }
 
   // -----------------------------------------------------------------------
@@ -2401,8 +3122,16 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
 
     const studyModal = document.getElementById("study-modal");
     if (studyModal) {
+      let rafQueued = false;
       const observer = new MutationObserver(() => {
-        attachInlineTutorButtons();
+        if (rafQueued) return;
+        rafQueued = true;
+        requestAnimationFrame(() => {
+          rafQueued = false;
+          observer.disconnect();
+          attachInlineTutorButtons(studyModal);
+          observer.observe(studyModal, { childList: true, subtree: true });
+        });
       });
       observer.observe(studyModal, { childList: true, subtree: true });
     }
