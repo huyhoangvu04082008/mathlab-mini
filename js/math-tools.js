@@ -54,7 +54,241 @@ const CMath = {
     re: 0.5 * Math.log(z.re * z.re + z.im * z.im || 1e-18),
     im: Math.atan2(z.im, z.re),
   }),
+  sqrt: (z) => {
+    const r = Math.hypot(z.re, z.im);
+    const phi = Math.atan2(z.im, z.re) * 0.5;
+    const sr = Math.sqrt(r);
+    return { re: sr * Math.cos(phi), im: sr * Math.sin(phi) };
+  },
+  pow: (z, w) => {
+    if (z.re === 0 && z.im === 0) {
+      return w.re > 0 ? { re: 0, im: 0 } : { re: NaN, im: NaN };
+    }
+    return CMath.exp(CMath.mul(w, CMath.log(z)));
+  },
+  tan: (z) => CMath.div(CMath.sin(z), CMath.cos(z)),
+  cot: (z) => CMath.div(CMath.cos(z), CMath.sin(z)),
+  sinh: (z) => ({
+    re: Math.sinh(z.re) * Math.cos(z.im),
+    im: Math.cosh(z.re) * Math.sin(z.im),
+  }),
+  cosh: (z) => ({
+    re: Math.cosh(z.re) * Math.cos(z.im),
+    im: Math.sinh(z.re) * Math.sin(z.im),
+  }),
+  tanh: (z) => CMath.div(CMath.sinh(z), CMath.cosh(z)),
+  atan: (z) => {
+    const iz = { re: -z.im, im: z.re };
+    const num = CMath.sub({ re: 1, im: 0 }, iz);
+    const den = CMath.add({ re: 1, im: 0 }, iz);
+    const lg = CMath.log(CMath.div(num, den));
+    return { re: -0.5 * lg.im, im: 0.5 * lg.re };
+  },
 };
+
+const _compiledComplexCache = new Map();
+
+function compileComplexMathFn(expr) {
+  const key = String(expr || "");
+  if (_compiledComplexCache.has(key)) return _compiledComplexCache.get(key);
+
+  const clean = latexToMathExpr(expr)
+    .replace(/(\d)\s*(?!(?:e[+-]?\d))([a-zA-Z(])/g, "$1*$2")
+    .replace(/(\))\s*([a-zA-Z0-9(])/g, "$1*$2")
+    .replace(/\b(pi|e|x)\s+(?=[a-zA-Z(])/gi, "$1*")
+    .replace(
+      /\bx\s*(?=(?:sin|cos|tan|cot|atan|sinh|cosh|tanh|ln|log|exp|sqrt|\())/g,
+      "x*",
+    )
+    .replace(/\^/g, "**")
+    .replace(/\*\*\s*([+-][a-zA-Z0-9_.]+)/g, "**($1)")
+    .replace(/\bpi\b/gi, "Math.PI")
+    .replace(/\be\b/g, "Math.E");
+
+  const tokens =
+    clean.match(
+      /\d+(?:\.\d+)?(?:e[+-]?\d+)?|Math\.PI|Math\.E|[a-zA-Z_]\w*|\*\*|[()+\-*/]/g,
+    ) || [];
+
+  let pos = 0;
+  const peek = () => tokens[pos];
+  const next = () => tokens[pos++];
+
+  function parseExpr() {
+    let node = parseTerm();
+    while (peek() === "+" || peek() === "-") {
+      const op = next();
+      const right = parseTerm();
+      node = op === "+" ? CMath.add(node, right) : CMath.sub(node, right);
+    }
+    return node;
+  }
+
+  function parseTerm() {
+    let node = parsePower();
+    while (peek() === "*" || peek() === "/") {
+      const op = next();
+      const right = parsePower();
+      node = op === "*" ? CMath.mul(node, right) : CMath.div(node, right);
+    }
+    return node;
+  }
+
+  function parsePower() {
+    let base = parseUnary();
+    if (peek() === "**") {
+      next();
+      const expNode = parsePower();
+      base = CMath.pow(base, expNode);
+    }
+    return base;
+  }
+
+  function parseUnary() {
+    if (peek() === "+") {
+      next();
+      return parseUnary();
+    }
+    if (peek() === "-") {
+      next();
+      const v = parseUnary();
+      return { re: -v.re, im: -v.im };
+    }
+    return parsePrimary();
+  }
+
+  function parsePrimary() {
+    const tok = next();
+    if (!tok) return { re: NaN, im: NaN };
+    if (tok === "(") {
+      const inner = parseExpr();
+      if (peek() === ")") next();
+      return inner;
+    }
+    if (tok === "x") return currentZ;
+    if (tok === "Math.PI") return { re: Math.PI, im: 0 };
+    if (tok === "Math.E") return { re: Math.E, im: 0 };
+    if (/^\d/.test(tok)) return { re: parseFloat(tok), im: 0 };
+    if (peek() === "(") {
+      next();
+      const arg = parseExpr();
+      if (peek() === ")") next();
+      if (tok === "sin") return CMath.sin(arg);
+      if (tok === "cos") return CMath.cos(arg);
+      if (tok === "tan") return CMath.tan(arg);
+      if (tok === "cot") return CMath.cot(arg);
+      if (tok === "atan") return CMath.atan(arg);
+      if (tok === "sinh") return CMath.sinh(arg);
+      if (tok === "cosh") return CMath.cosh(arg);
+      if (tok === "tanh") return CMath.tanh(arg);
+      if (tok === "exp") return CMath.exp(arg);
+      if (tok === "ln") return CMath.log(arg);
+      if (tok === "log") {
+        const lg = CMath.log(arg);
+        const invLn10 = 1 / Math.LN10;
+        return { re: lg.re * invLn10, im: lg.im * invLn10 };
+      }
+      if (tok === "sqrt") return CMath.sqrt(arg);
+    }
+    return { re: NaN, im: NaN };
+  }
+
+  let currentZ = { re: 0, im: 0 };
+  const fn = (z) => {
+    pos = 0;
+    currentZ = z;
+    const res = parseExpr();
+    return pos === tokens.length ? res : { re: NaN, im: NaN };
+  };
+
+  if (_compiledComplexCache.size > 30) _compiledComplexCache.clear();
+  _compiledComplexCache.set(key, fn);
+  return fn;
+}
+
+function computeTaylorCoeffsCauchy(expr, x0, maxDegree) {
+  const cFn = compileComplexMathFn(expr);
+  const radii = [0.35, 0.16, 0.07];
+  const M = 64;
+
+  for (const r of radii) {
+    const samples = [];
+    let valid = true;
+    for (let j = 0; j < M; j++) {
+      const theta = (2 * Math.PI * j) / M;
+      const z = { re: x0 + r * Math.cos(theta), im: r * Math.sin(theta) };
+      const fz = cFn(z);
+      if (!Number.isFinite(fz.re) || !Number.isFinite(fz.im)) {
+        valid = false;
+        break;
+      }
+      samples.push({ fz, theta });
+    }
+    if (!valid) continue;
+
+    const coeffs = [];
+    let rPow = 1;
+    for (let k = 0; k <= maxDegree; k++) {
+      let sumRe = 0;
+      for (let j = 0; j < M; j++) {
+        const { fz, theta } = samples[j];
+        const ang = -k * theta;
+        sumRe += fz.re * Math.cos(ang) - fz.im * Math.sin(ang);
+      }
+      const ck = sumRe / (M * rPow);
+      coeffs.push(Math.abs(ck) < 1e-12 ? 0 : ck);
+      rPow *= r;
+    }
+    return coeffs;
+  }
+  return null;
+}
+
+function formatCoeffFractionLatex(val) {
+  const absV = Math.abs(val);
+  if (Math.abs(absV - Math.round(absV)) < 1e-7) {
+    return String(Math.round(absV));
+  }
+  const commonDens = [
+    2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 16, 20, 24, 30, 32, 36, 40, 48, 60, 64, 72,
+    120, 720, 5040,
+  ];
+  for (const d of commonDens) {
+    const n = Math.round(absV * d);
+    if (n > 0 && Math.abs(absV - n / d) < 1e-7) {
+      return `\\frac{${n}}{${d}}`;
+    }
+  }
+  return Number(absV.toFixed(4)).toString();
+}
+
+function formatTaylorPolyLatex(coeffs, x0, deg) {
+  const terms = [];
+  const xBase =
+    Math.abs(x0) < 1e-9
+      ? "x"
+      : x0 > 0
+        ? `(x - ${formatNum(x0)})`
+        : `(x + ${formatNum(Math.abs(x0))})`;
+
+  for (let k = 0; k <= deg && k < coeffs.length; k++) {
+    const c = coeffs[k];
+    if (!Number.isFinite(c) || Math.abs(c) < 1e-9) continue;
+    const sign = c < 0 ? "-" : "+";
+    const magStr = formatCoeffFractionLatex(c);
+    const varPart = k === 0 ? "" : k === 1 ? xBase : `${xBase}^{${k}}`;
+    const body = varPart && magStr === "1" ? varPart : `${magStr}${varPart}`;
+
+    if (terms.length === 0) {
+      terms.push(c < 0 ? `-${body}` : body);
+    } else {
+      terms.push(`${sign} ${body}`);
+    }
+  }
+
+  const rhs = terms.length > 0 ? terms.join(" ") : "0";
+  return `P_{${deg}}(x) = ${rhs}`;
+}
 
 // --- BỘ CHUYỂN ĐỔI CÚ PHÁP LATEX & TOÁN HỌC SANG BIỂU THỨC JS ---
 function extractBraceGroup(str, openBraceIdx) {
@@ -461,6 +695,9 @@ function computeTaylorCoeffs(presetType, customExpr, x0, maxDegree) {
     return coeffs;
   }
 
+  const cauchyCoeffs = computeTaylorCoeffsCauchy(customExpr, x0, maxDegree);
+  if (cauchyCoeffs) return cauchyCoeffs;
+
   const comb = (n, i) => {
     let res = 1;
     for (let j = 1; j <= i; j++) res = (res * (n - j + 1)) / j;
@@ -749,6 +986,35 @@ function bindCalculusCanvasInteractions(canvas) {
   });
 }
 
+let _lastTaylorTickDeg = null;
+
+function onTaylorDegreeInput(autoEnable = true) {
+  const slider = document.getElementById("taylor-degree");
+  const toggle = document.getElementById("toggle-taylor-overlay");
+  if (!slider) return;
+
+  const deg = parseInt(slider.value, 10) || 0;
+  if (autoEnable && toggle && !toggle.checked) {
+    toggle.checked = true;
+  }
+  if (_lastTaylorTickDeg !== deg) {
+    _lastTaylorTickDeg = deg;
+    window.MathLabSound?.tick?.();
+  }
+  runCalculusLab();
+}
+
+function stepTaylorDegree(delta) {
+  const slider = document.getElementById("taylor-degree");
+  if (!slider) return;
+  const min = parseInt(slider.min || "0", 10);
+  const max = parseInt(slider.max || "12", 10);
+  const cur = parseInt(slider.value || "0", 10);
+  const next = Math.max(min, Math.min(max, cur + delta));
+  slider.value = String(next);
+  onTaylorDegreeInput(true);
+}
+
 function initGraphLabUI() {
   const slot = document.getElementById("taylor-controls-slot");
   if (
@@ -759,10 +1025,10 @@ function initGraphLabUI() {
     slot.innerHTML = `
       <div id="taylor-visual-panel" style="margin-top:10px; padding:14px; border-radius:12px; background:var(--bg-surface-alt); border:1px solid var(--border-color);">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
-          <strong style="color:var(--primary); font-size:0.9rem;">✨ Xấp xỉ Taylor – Maclaurin $P_n(x)$</strong>
+          <strong style="color:var(--primary); font-size:0.9rem;">✨ Taylor Step Scrubber Pₙ(x)</strong>
           <label style="display:flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:700; cursor:pointer;">
             <input type="checkbox" id="toggle-taylor-overlay" onchange="runCalculusLab()">
-            <span>Bật đường cam $P_n(x)$</span>
+            <span>Bật đường cam Pₙ(x)</span>
           </label>
         </div>
         <div class="taylor-controls-stack">
@@ -779,22 +1045,133 @@ function initGraphLabUI() {
           </div>
           <div>
             <label for="taylor-degree" style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">
-              Bậc khai triển n = <span id="taylor-deg-label" style="color:var(--primary);">3</span>:
+              Bậc khai triển n = <span id="taylor-deg-label" style="color:var(--primary); font-family:var(--font-mono);">3</span> <span style="color:var(--text-muted); font-weight:500;">(0 → 12)</span>:
             </label>
-            <div class="taylor-slider-row">
-              <input type="range" id="taylor-degree" min="0" max="8" value="3" oninput="runCalculusLab()">
-              <button type="button" class="btn btn-sm btn-secondary" id="taylor-play-btn" onclick="toggleTaylorAnimation()">▶️ Chạy bậc n</button>
+            <div class="taylor-slider-row" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <button type="button" class="btn btn-sm btn-outline" title="Giảm bậc n (-1)" onclick="stepTaylorDegree(-1)" style="padding:4px 9px; font-family:var(--font-mono);">◀</button>
+              <input type="range" id="taylor-degree" min="0" max="12" value="3" oninput="onTaylorDegreeInput(true)" style="flex:1; min-width:110px;">
+              <button type="button" class="btn btn-sm btn-outline" title="Tăng bậc n (+1)" onclick="stepTaylorDegree(1)" style="padding:4px 9px; font-family:var(--font-mono);">▶</button>
+              <button type="button" class="btn btn-sm btn-secondary" id="taylor-play-btn" onclick="toggleTaylorAnimation()">▶️ Tua bậc n</button>
             </div>
           </div>
         </div>
+        <div id="taylor-formula-box" style="margin-top:10px; padding:8px 10px; border-radius:8px; background:var(--bg-body); border:1px dashed rgba(249,115,22,0.45); font-size:0.84rem; overflow-x:auto; display:none;"></div>
       </div>
     `;
+  }
+  if (slot && !document.getElementById("riemann-visual-panel")) {
+    const riemannPanel = document.createElement("div");
+    riemannPanel.id = "riemann-visual-panel";
+    riemannPanel.style.cssText =
+      "margin-top:10px; padding:14px; border-radius:12px; background:var(--bg-surface-alt); border:1px solid var(--border-color);";
+    riemannPanel.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+        <strong style="color:#10b981; font-size:0.9rem;">📊 Chia Tổng Riemann &amp; Quy tắc Hình thang</strong>
+        <label style="display:flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:700; cursor:pointer;">
+          <input type="checkbox" id="toggle-riemann-overlay" onchange="runCalculusLab()">
+          <span>Bật chia cột trên [a, b]</span>
+        </label>
+      </div>
+      <div class="taylor-controls-stack">
+        <div>
+          <label for="riemann-method" style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Phương pháp xấp xỉ:</label>
+          <select id="riemann-method" class="select-control" style="width:100%;" onchange="onRiemannInput(true, false)">
+            <option value="midpoint" selected>Tổng Riemann Trung điểm (Midpoint)</option>
+            <option value="left">Tổng Riemann Trái (Left)</option>
+            <option value="right">Tổng Riemann Phải (Right)</option>
+            <option value="trapezoid">Quy tắc Hình thang (Trapezoidal)</option>
+            <option value="upper">Tổng Darboux Trên (Upper Sum)</option>
+            <option value="lower">Tổng Darboux Dưới (Lower Sum)</option>
+          </select>
+        </div>
+        <div>
+          <label for="riemann-n" style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">
+            Số đoạn chia N = <span id="riemann-n-label" style="color:#10b981; font-family:var(--font-mono);">8</span> <span style="color:var(--text-muted); font-weight:500;">(1 → 60)</span>:
+          </label>
+          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-sm btn-outline" title="Giảm N (-1)" onclick="stepRiemannN(-1)" style="padding:4px 9px; font-family:var(--font-mono);">◀</button>
+            <input type="range" id="riemann-n" min="1" max="60" value="8" oninput="onRiemannInput(true, true)" style="flex:1; min-width:110px;">
+            <button type="button" class="btn btn-sm btn-outline" title="Tăng N (+1)" onclick="stepRiemannN(1)" style="padding:4px 9px; font-family:var(--font-mono);">▶</button>
+            <button type="button" class="btn btn-sm btn-secondary" id="riemann-play-btn" onclick="toggleRiemannAnimation()">▶️ Chia mịn dần</button>
+          </div>
+        </div>
+      </div>
+      <div id="riemann-readout-box" style="margin-top:10px; padding:8px 10px; border-radius:8px; background:var(--bg-body); border:1px dashed rgba(16,185,129,0.45); font-family:var(--font-mono); font-size:0.79rem; color:var(--text-secondary); display:none;"></div>
+    `;
+    slot.appendChild(riemannPanel);
   }
   const canvas = document.getElementById("calc-canvas");
   if (canvas) bindCalculusCanvasInteractions(canvas);
   updateCalcLatexPreview();
   updateZoomBadge();
   runCalculusLab();
+}
+
+let riemannAnimTimer = null;
+let _lastRiemannTickN = null;
+
+function onRiemannInput(autoEnable = true, stopAnim = false) {
+  if (stopAnim && riemannAnimTimer) {
+    clearInterval(riemannAnimTimer);
+    riemannAnimTimer = null;
+    const btn = document.getElementById("riemann-play-btn");
+    if (btn) btn.textContent = "▶️ Chia mịn dần";
+  }
+  const slider = document.getElementById("riemann-n");
+  const toggle = document.getElementById("toggle-riemann-overlay");
+  if (!slider) return;
+
+  const nVal = parseInt(slider.value, 10) || 1;
+  if (autoEnable && toggle && !toggle.checked) {
+    toggle.checked = true;
+  }
+  if (_lastRiemannTickN !== nVal) {
+    _lastRiemannTickN = nVal;
+    window.MathLabSound?.tick?.();
+  }
+  runCalculusLab();
+}
+
+function stepRiemannN(delta) {
+  const slider = document.getElementById("riemann-n");
+  if (!slider) return;
+  const min = parseInt(slider.min || "1", 10);
+  const max = parseInt(slider.max || "60", 10);
+  const cur = parseInt(slider.value || "8", 10);
+  slider.value = String(Math.max(min, Math.min(max, cur + delta)));
+  onRiemannInput(true, true);
+}
+
+function toggleRiemannAnimation() {
+  const btn = document.getElementById("riemann-play-btn");
+  const slider = document.getElementById("riemann-n");
+  const toggle = document.getElementById("toggle-riemann-overlay");
+  if (!slider) return;
+
+  if (riemannAnimTimer) {
+    clearInterval(riemannAnimTimer);
+    riemannAnimTimer = null;
+    if (btn) btn.textContent = "▶️ Chia mịn dần";
+    return;
+  }
+
+  if (toggle) toggle.checked = true;
+  if (parseInt(slider.value, 10) >= 40) slider.value = "2";
+  if (btn) btn.textContent = "⏸️ Dừng";
+
+  riemannAnimTimer = setInterval(() => {
+    const cur = parseInt(slider.value, 10) || 2;
+    const step = cur < 12 ? 1 : cur < 24 ? 2 : 4;
+    const next = cur + step;
+    if (next > 44) {
+      clearInterval(riemannAnimTimer);
+      riemannAnimTimer = null;
+      if (btn) btn.textContent = "▶️ Chia mịn dần";
+      return;
+    }
+    slider.value = String(next);
+    onRiemannInput(true, false);
+  }, 360);
 }
 
 function onTaylorPresetChange() {
@@ -813,6 +1190,7 @@ function onTaylorPresetChange() {
     if (toggle) toggle.checked = true;
     updateCalcLatexPreview();
   }
+  window.MathLabSound?.soft?.();
   runCalculusLab();
 }
 
@@ -825,17 +1203,18 @@ function toggleTaylorAnimation() {
   if (taylorAnimTimer) {
     clearInterval(taylorAnimTimer);
     taylorAnimTimer = null;
-    if (btn) btn.textContent = "▶️ Chạy bậc n";
+    if (btn) btn.textContent = "▶️ Tua bậc n";
     return;
   }
 
+  const maxDeg = parseInt(slider.max || "12", 10);
   if (toggle) toggle.checked = true;
   if (btn) btn.textContent = "⏸️ Dừng";
   taylorAnimTimer = setInterval(() => {
-    let nextVal = (parseInt(slider.value, 10) + 1) % 9;
+    let nextVal = (parseInt(slider.value, 10) + 1) % (maxDeg + 1);
     slider.value = String(nextVal);
-    runCalculusLab();
-  }, 850);
+    onTaylorDegreeInput(true);
+  }, 620);
 }
 
 function setCalcPreset(expr, x0, a, b) {
@@ -1009,38 +1388,170 @@ function runCalculusLab() {
   const a = Number.isFinite(aRaw) ? aRaw : 0;
   const b = Number.isFinite(bRaw) ? bRaw : 0;
 
-  // 1. Tô miền tích phân từ a đến b
+  // 1. Tô miền tích phân từ a đến b (hoặc vẽ chia cột Tổng Riemann / Quy tắc Hình thang)
+  const showRiemann =
+    document.getElementById("toggle-riemann-overlay")?.checked ?? false;
+  const riemannMethod =
+    document.getElementById("riemann-method")?.value || "midpoint";
+  const riemannN = Math.max(
+    1,
+    Math.min(
+      60,
+      parseInt(document.getElementById("riemann-n")?.value || "8", 10),
+    ),
+  );
+  const riemannNLabel = document.getElementById("riemann-n-label");
+  if (riemannNLabel) riemannNLabel.textContent = String(riemannN);
+
+  let riemannApproxSum = NaN;
+
   if (Number.isFinite(a) && Number.isFinite(b) && a !== b) {
     const lo = Math.min(a, b);
     const hi = Math.max(a, b);
-    const steps = 160;
-    const dxInt = (hi - lo) / steps;
-    ctx.fillStyle = "rgba(59, 130, 246, 0.18)";
-    ctx.beginPath();
-    let areaStarted = false;
-    let firstValidX = lo;
-    let lastValidX = hi;
-    for (let i = 0; i <= steps; i++) {
-      const x = lo + i * dxInt;
-      const y = safeEval(x);
-      if (Number.isFinite(y)) {
-        const clampedPy = Math.max(
-          -height,
-          Math.min(height * 2, originY - y * scale),
-        );
-        if (!areaStarted) {
-          firstValidX = x;
-          ctx.moveTo(originX + firstValidX * scale, originY);
-          areaStarted = true;
+    const dirSign = b >= a ? 1 : -1;
+
+    if (showRiemann) {
+      const dxSub = (hi - lo) / riemannN;
+      let sumAcc = 0;
+      let validBars = 0;
+
+      for (let i = 0; i < riemannN; i++) {
+        const xL = lo + i * dxSub;
+        const xR = xL + dxSub;
+        const pxL = originX + xL * scale;
+        const pxR = originX + xR * scale;
+
+        if (riemannMethod === "trapezoid") {
+          const yL = safeEval(xL);
+          const yR = safeEval(xR);
+          if (!Number.isFinite(yL) || !Number.isFinite(yR)) continue;
+          validBars++;
+          sumAcc += 0.5 * (yL + yR) * dxSub * dirSign;
+
+          const pyL = Math.max(
+            -height,
+            Math.min(height * 2, originY - yL * scale),
+          );
+          const pyR = Math.max(
+            -height,
+            Math.min(height * 2, originY - yR * scale),
+          );
+          const isNeg = yL + yR < 0;
+
+          ctx.fillStyle = isNeg
+            ? "rgba(244, 63, 94, 0.2)"
+            : "rgba(16, 185, 129, 0.22)";
+          ctx.strokeStyle = isNeg
+            ? "rgba(244, 63, 94, 0.78)"
+            : "rgba(16, 185, 129, 0.82)";
+          ctx.lineWidth = riemannN <= 30 ? 1.2 : 0.8;
+
+          ctx.beginPath();
+          ctx.moveTo(pxL, originY);
+          ctx.lineTo(pxL, pyL);
+          ctx.lineTo(pxR, pyR);
+          ctx.lineTo(pxR, originY);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          let xSample = (xL + xR) * 0.5;
+          let ySample = NaN;
+
+          if (riemannMethod === "left") {
+            xSample = xL;
+            ySample = safeEval(xL);
+          } else if (riemannMethod === "right") {
+            xSample = xR;
+            ySample = safeEval(xR);
+          } else if (riemannMethod === "upper" || riemannMethod === "lower") {
+            let bestY = riemannMethod === "upper" ? -Infinity : Infinity;
+            let bestX = xSample;
+            for (let s = 0; s <= 12; s++) {
+              const xs = xL + (s / 12) * dxSub;
+              const ys = safeEval(xs);
+              if (!Number.isFinite(ys)) continue;
+              if (
+                (riemannMethod === "upper" && ys > bestY) ||
+                (riemannMethod === "lower" && ys < bestY)
+              ) {
+                bestY = ys;
+                bestX = xs;
+              }
+            }
+            if (Number.isFinite(bestY)) {
+              ySample = bestY;
+              xSample = bestX;
+            }
+          } else {
+            ySample = safeEval(xSample);
+          }
+
+          if (!Number.isFinite(ySample)) continue;
+          validBars++;
+          sumAcc += ySample * dxSub * dirSign;
+
+          const pyTop = Math.max(
+            -height,
+            Math.min(height * 2, originY - ySample * scale),
+          );
+          const rectY = Math.min(originY, pyTop);
+          const rectH = Math.abs(originY - pyTop);
+          const rectW = Math.max(1, pxR - pxL);
+
+          ctx.fillStyle =
+            ySample < 0 ? "rgba(244, 63, 94, 0.2)" : "rgba(16, 185, 129, 0.22)";
+          ctx.strokeStyle =
+            ySample < 0
+              ? "rgba(244, 63, 94, 0.78)"
+              : "rgba(16, 185, 129, 0.82)";
+          ctx.lineWidth = riemannN <= 30 ? 1.2 : 0.75;
+
+          ctx.fillRect(pxL, rectY, rectW, rectH);
+          ctx.strokeRect(pxL, rectY, rectW, rectH);
+
+          // Vẽ chấm tròn đánh dấu điểm lấy mẫu f(x_i*) trên đỉnh cột
+          if (riemannN <= 32) {
+            const pxDot = originX + xSample * scale;
+            ctx.fillStyle = ySample < 0 ? "#f43f5e" : "#10b981";
+            ctx.beginPath();
+            ctx.arc(pxDot, pyTop, 2.7, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
-        lastValidX = x;
-        ctx.lineTo(originX + x * scale, clampedPy);
       }
-    }
-    if (areaStarted) {
-      ctx.lineTo(originX + lastValidX * scale, originY);
-      ctx.closePath();
-      ctx.fill();
+
+      if (validBars > 0) riemannApproxSum = sumAcc;
+    } else {
+      const steps = 160;
+      const dxInt = (hi - lo) / steps;
+      ctx.fillStyle = "rgba(59, 130, 246, 0.18)";
+      ctx.beginPath();
+      let areaStarted = false;
+      let firstValidX = lo;
+      let lastValidX = hi;
+      for (let i = 0; i <= steps; i++) {
+        const x = lo + i * dxInt;
+        const y = safeEval(x);
+        if (Number.isFinite(y)) {
+          const clampedPy = Math.max(
+            -height,
+            Math.min(height * 2, originY - y * scale),
+          );
+          if (!areaStarted) {
+            firstValidX = x;
+            ctx.moveTo(originX + firstValidX * scale, originY);
+            areaStarted = true;
+          }
+          lastValidX = x;
+          ctx.lineTo(originX + x * scale, clampedPy);
+        }
+      }
+      if (areaStarted) {
+        ctx.lineTo(originX + lastValidX * scale, originY);
+        ctx.closePath();
+        ctx.fill();
+      }
     }
   }
 
@@ -1180,10 +1691,54 @@ function runCalculusLab() {
   if (degLabel) degLabel.textContent = deg;
 
   let taylorInfoHtml = "";
+  const formulaBox = document.getElementById("taylor-formula-box");
   if (showTaylor) {
     const coeffs = computeTaylorCoeffs(preset, expr, x0, deg);
+
+    // Tô bóng dải sai số |f(x) - P_n(x)| giữa hai đường cong để quan sát độ hội tụ trực quan
+    ctx.fillStyle = "rgba(249, 115, 22, 0.13)";
+    let segPts = [];
+    const flushErrorRibbon = () => {
+      if (segPts.length >= 2) {
+        ctx.beginPath();
+        ctx.moveTo(segPts[0].px, segPts[0].pyF);
+        for (let i = 1; i < segPts.length; i++) {
+          ctx.lineTo(segPts[i].px, segPts[i].pyF);
+        }
+        for (let i = segPts.length - 1; i >= 0; i--) {
+          ctx.lineTo(segPts[i].px, segPts[i].pyT);
+        }
+        ctx.closePath();
+        ctx.fill();
+      }
+      segPts = [];
+    };
+
+    for (let px = 0; px <= width; px += 4) {
+      const x = (px - originX) / scale;
+      const yf = safeEval(x);
+      const yt = evalTaylorPoly(coeffs, x0, x);
+      const pyF = originY - yf * scale;
+      const pyT = originY - yt * scale;
+      if (
+        Number.isFinite(yf) &&
+        Number.isFinite(yt) &&
+        Math.abs(pyF - pyT) < height * 1.1 &&
+        pyF >= -height &&
+        pyF <= height * 2 &&
+        pyT >= -height &&
+        pyT <= height * 2
+      ) {
+        segPts.push({ px, pyF, pyT });
+      } else {
+        flushErrorRibbon();
+      }
+    }
+    flushErrorRibbon();
+
+    // Vẽ đường đa thức Taylor P_n(x)
     ctx.strokeStyle = "#f97316";
-    ctx.lineWidth = 2.4;
+    ctx.lineWidth = 2.5;
     ctx.setLineDash([7, 4]);
     ctx.beginPath();
     let tStart = false;
@@ -1204,7 +1759,50 @@ function runCalculusLab() {
     }
     ctx.stroke();
     ctx.setLineDash([]);
-    taylorInfoHtml = `<div style="color:#f97316; margin-top:4px;">• <strong>Đa thức Taylor bậc ${deg} tại x₀ = ${x0}:</strong> Đang hiển thị đường nét đứt màu cam trên đồ thị.</div>`;
+
+    // Tính sai số tại điểm chuột (hoặc tại x0 + 0.5)
+    const probeX =
+      calcViewport.hoverPx !== null
+        ? (calcViewport.hoverPx - originX) / scale
+        : x0 + 0.5;
+    const fProbe = safeEval(probeX);
+    const pProbe = evalTaylorPoly(coeffs, x0, probeX);
+    const remErr =
+      Number.isFinite(fProbe) && Number.isFinite(pProbe)
+        ? Math.abs(fProbe - pProbe)
+        : NaN;
+    const remStr = Number.isFinite(remErr)
+      ? remErr < 1e-4 && remErr > 0
+        ? remErr.toExponential(2)
+        : remErr.toFixed(5)
+      : "N/A";
+
+    if (formulaBox) {
+      formulaBox.style.display = "block";
+      const fCacheKey = `${preset}|${expr}|${x0}|${deg}`;
+      if (formulaBox.dataset.fKey !== fCacheKey) {
+        formulaBox.dataset.fKey = fCacheKey;
+        const polyLatex = formatTaylorPolyLatex(coeffs, x0, deg);
+        formulaBox.innerHTML = `<div id="taylor-katex-line" style="color:#f97316; font-weight:700;"></div><div id="taylor-err-line" style="margin-top:4px; font-family:var(--font-mono); font-size:0.78rem; color:var(--text-secondary);"></div>`;
+        const kLine = document.getElementById("taylor-katex-line");
+        if (kLine && window.katex?.render) {
+          window.katex.render(polyLatex, kLine, {
+            throwOnError: false,
+            displayMode: false,
+          });
+        } else if (kLine) {
+          kLine.textContent = `$${polyLatex}$`;
+        }
+      }
+      const errLine = document.getElementById("taylor-err-line");
+      if (errLine) {
+        errLine.textContent = `Sai số |f(${formatNum(probeX)}) - P${deg}(${formatNum(probeX)})| ≈ ${remStr}`;
+      }
+    }
+
+    taylorInfoHtml = `<div style="color:#f97316; margin-top:4px;">• <strong>Đa thức Taylor bậc ${deg} tại x₀ = ${x0}:</strong> Sai số tại <code>x = ${formatNum(probeX)}</code> là <code>|Rₙ(x)| ≈ ${remStr}</code>.</div>`;
+  } else if (formulaBox) {
+    formulaBox.style.display = "none";
   }
 
   // 5. Con trỏ thông minh GeoGebra (Crosshair & Tọa độ trực tiếp trên đường cong khi di chuột)
@@ -1253,7 +1851,7 @@ function runCalculusLab() {
 
   // 6. Tính tích phân xác định bằng quy tắc Simpson (chỉ cập nhật DOM khi tham số/miền nhìn đổi)
   if (out) {
-    const outCacheKey = `${expr}|${x0}|${a}|${b}|${plottedCount > 0 ? 1 : 0}|${runtimeError || ""}|${showTaylor ? deg + "_" + preset : 0}`;
+    const outCacheKey = `${expr}|${x0}|${a}|${b}|${plottedCount > 0 ? 1 : 0}|${runtimeError || ""}|${showTaylor ? deg + "_" + preset : 0}|${showRiemann ? riemannN + "_" + riemannMethod : 0}`;
     if (out.dataset.cacheKey !== outCacheKey) {
       out.dataset.cacheKey = outCacheKey;
       const n = 200;
@@ -1266,6 +1864,30 @@ function runCalculusLab() {
         sum += (i % 2 === 0 ? 2 : 4) * safeEval(safeA + i * step);
       }
       const integral = (step / 3) * sum;
+
+      const riemannBox = document.getElementById("riemann-readout-box");
+      let riemannInfoHtml = "";
+      if (showRiemann) {
+        const dxVal = Math.abs(b - a) / riemannN;
+        const absErr =
+          Number.isFinite(integral) && Number.isFinite(riemannApproxSum)
+            ? Math.abs(integral - riemannApproxSum)
+            : NaN;
+        const symLabel =
+          riemannMethod === "trapezoid" ? `T_${riemannN}` : `S_${riemannN}`;
+        const approxStr = Number.isFinite(riemannApproxSum)
+          ? riemannApproxSum.toFixed(5)
+          : "Không xác định";
+        const errStr = Number.isFinite(absErr) ? absErr.toFixed(5) : "N/A";
+
+        if (riemannBox) {
+          riemannBox.style.display = "block";
+          riemannBox.innerHTML = `Δx = ${formatNum(dxVal)} &nbsp;|&nbsp; <strong style="color:#10b981;">${symLabel} ≈ ${approxStr}</strong> &nbsp;|&nbsp; Sai số |I - ${symLabel}| ≈ <strong>${errStr}</strong>`;
+        }
+        riemannInfoHtml = `<div style="color:#10b981; margin-top:4px;">• <strong>Tổng xấp xỉ (${riemannMethod}, N = ${riemannN}):</strong> <code>${symLabel} ≈ ${approxStr}</code> (Sai số so với Simpson: <code>${errStr}</code>).</div>`;
+      } else if (riemannBox) {
+        riemannBox.style.display = "none";
+      }
 
       const intercept = y0 - slope * x0;
       const signStr =
@@ -1282,6 +1904,7 @@ function runCalculusLab() {
         <div style="margin-bottom:6px;">• <strong>Giá trị hàm tại x₀ = ${x0}:</strong> <code>f(${x0}) = ${Number.isFinite(y0) ? formatNum(y0) : "Không xác định"}</code></div>
         <div style="margin-bottom:6px;">• <strong>Đạo hàm &amp; Tiếp tuyến tại x₀:</strong> <code>f'(${x0}) ≈ ${Number.isFinite(slope) ? formatNum(slope) : "N/A"}</code> &nbsp;|&nbsp; Phương trình: <code>y = ${Number.isFinite(slope) ? formatNum(slope) + "x " + signStr : "N/A"}</code></div>
         <div>• <strong>Tích phân xác định ∫<sub>${a}</sub><sup>${b}</sup> f(x)dx (Simpson):</strong> <code>≈ ${Number.isFinite(integral) ? integral.toFixed(5) : "Không xác định"}</code></div>
+        ${riemannInfoHtml}
         ${taylorInfoHtml}
       `;
     }
@@ -1302,17 +1925,527 @@ function runCalculusLab() {
 }
 
 /* ==========================================================================
-   2. PHÂN TÍCH MA TRẬN VUÔNG & CHỮ NHẬT m × n
+   2. PHÂN TÍCH MA TRẬN VUÔNG & CHỮ NHẬT m × n + SÂN KHẤU BIẾN HÌNH 2D
    ========================================================================== */
+const mat2DStageState = {
+  t: 1,
+  animRaf: null,
+  lastTickStep: -1,
+  hoverWorld: null,
+  matrix: [
+    [2, 1],
+    [0, 1.5],
+  ],
+};
+
+function ensure2x2MatrixOption() {
+  const sizeSelect = document.getElementById("matrix-size");
+  if (!sizeSelect) return;
+  const has2x2 = Array.from(sizeSelect.options).some(
+    (opt) => opt.value === "2x2" || opt.value === "2",
+  );
+  if (!has2x2) {
+    const opt = document.createElement("option");
+    opt.value = "2x2";
+    opt.textContent = "2 × 2 (Biến đổi 2D & Vector riêng)";
+    sizeSelect.insertBefore(opt, sizeSelect.firstChild);
+  }
+}
+
+function apply2DTransformPreset(type) {
+  ensure2x2MatrixOption();
+  const sizeSelect = document.getElementById("matrix-size");
+  if (sizeSelect) {
+    const opt2 = Array.from(sizeSelect.options).find(
+      (o) => o.value === "2x2" || o.value === "2",
+    );
+    if (opt2) sizeSelect.value = opt2.value;
+  }
+  renderMatrixGrid();
+
+  const presets = {
+    stretch: [
+      [2, 1],
+      [0, 1.5],
+    ],
+    rotate: [
+      [0.707, -0.707],
+      [0.707, 0.707],
+    ],
+    reflect: [
+      [0.6, 0.8],
+      [0.8, -0.6],
+    ],
+    singular: [
+      [1, 2],
+      [0.5, 1],
+    ],
+  };
+  const chosen = presets[type] || presets.stretch;
+  document.querySelectorAll(".mat-cell").forEach((inp) => {
+    const r = parseInt(inp.dataset.r, 10);
+    const c = parseInt(inp.dataset.c, 10);
+    if (chosen[r] && chosen[r][c] !== undefined) {
+      inp.value = chosen[r][c];
+    }
+  });
+
+  window.MathLabSound?.soft?.();
+  analyzeMatrix();
+  play2DMatrixMorph();
+}
+
+function on2DMorphSliderInput(val) {
+  if (mat2DStageState.animRaf) {
+    cancelAnimationFrame(mat2DStageState.animRaf);
+    mat2DStageState.animRaf = null;
+    const playBtn = document.getElementById("mat2d-play-btn");
+    if (playBtn) playBtn.textContent = "▶️ Biến hình";
+  }
+  const pct = Math.max(0, Math.min(100, parseInt(val, 10) || 0));
+  mat2DStageState.t = pct / 100;
+  const step = Math.floor(pct / 5);
+  if (step !== mat2DStageState.lastTickStep) {
+    mat2DStageState.lastTickStep = step;
+    window.MathLabSound?.tick?.();
+  }
+  render2DMatrixTransformCanvas();
+}
+
+function play2DMatrixMorph() {
+  const slider = document.getElementById("mat2d-morph-slider");
+  const playBtn = document.getElementById("mat2d-play-btn");
+  if (mat2DStageState.animRaf) {
+    cancelAnimationFrame(mat2DStageState.animRaf);
+    mat2DStageState.animRaf = null;
+    if (playBtn) playBtn.textContent = "▶️ Biến hình";
+    return;
+  }
+
+  if (playBtn) playBtn.textContent = "⏸️ Dừng";
+  const duration = 1350;
+  const startTime = performance.now();
+
+  const stepAnim = (now) => {
+    const rawP = Math.min(1, (now - startTime) / duration);
+    // Ease-in-out cubic mượt mà
+    const eased =
+      rawP < 0.5 ? 4 * rawP * rawP * rawP : 1 - Math.pow(-2 * rawP + 2, 3) / 2;
+    mat2DStageState.t = eased;
+    if (slider) slider.value = String(Math.round(eased * 100));
+    render2DMatrixTransformCanvas();
+
+    if (rawP < 1) {
+      mat2DStageState.animRaf = requestAnimationFrame(stepAnim);
+    } else {
+      mat2DStageState.animRaf = null;
+      if (playBtn) playBtn.textContent = "▶️ Biến hình";
+    }
+  };
+  mat2DStageState.animRaf = requestAnimationFrame(stepAnim);
+}
+
+function compute2DEigenData(A) {
+  const a = A[0][0],
+    b = A[0][1],
+    c = A[1][0],
+    d = A[1][1];
+  const trace = a + d;
+  const det = a * d - b * c;
+  const disc = trace * trace - 4 * det;
+
+  if (disc < -1e-7) {
+    return {
+      isReal: false,
+      re: trace * 0.5,
+      im: Math.sqrt(-disc) * 0.5,
+      det,
+      trace,
+    };
+  }
+
+  const sqrtD = Math.sqrt(Math.max(0, disc));
+  const l1 = (trace + sqrtD) * 0.5;
+  const l2 = (trace - sqrtD) * 0.5;
+
+  const findVec = (lam, fallbackIdx) => {
+    const v1x = -b,
+      v1y = a - lam;
+    const v2x = d - lam,
+      v2y = -c;
+    const n1 = Math.hypot(v1x, v1y);
+    const n2 = Math.hypot(v2x, v2y);
+    if (n1 >= n2 && n1 > 1e-7) return { x: v1x / n1, y: v1y / n1 };
+    if (n2 > 1e-7) return { x: v2x / n2, y: v2y / n2 };
+    return fallbackIdx === 0 ? { x: 1, y: 0 } : { x: 0, y: 1 };
+  };
+
+  const pairs = [{ lambda: l1, vec: findVec(l1, 0) }];
+  if (Math.abs(l1 - l2) > 1e-6 || (Math.abs(b) < 1e-7 && Math.abs(c) < 1e-7)) {
+    pairs.push({ lambda: l2, vec: findVec(l2, 1) });
+  }
+
+  return { isReal: true, pairs, det, trace };
+}
+
+function render2DMatrixTransformCanvas() {
+  const canvas = document.getElementById("mat2d-transform-canvas");
+  const infoBar = document.getElementById("mat2d-eigen-readout");
+  if (!canvas) return;
+
+  const parentW = canvas.parentElement ? canvas.parentElement.clientWidth : 0;
+  const targetW = parentW > 80 ? Math.max(280, parentW - 2) : 520;
+  const targetH = 290;
+  if (canvas.width !== targetW) canvas.width = targetW;
+  if (canvas.height !== targetH) canvas.height = targetH;
+
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+
+  ctx.fillStyle = isDark ? "#080f1e" : "#f8fafc";
+  ctx.fillRect(0, 0, w, h);
+
+  const A = mat2DStageState.matrix;
+  const t = mat2DStageState.t;
+  const pctLabel = document.getElementById("mat2d-t-label");
+  if (pctLabel) pctLabel.textContent = `${Math.round(t * 100)}%`;
+
+  // Nội suy M(t) = (1 - t)I + tA
+  const m11 = 1 - t + t * A[0][0];
+  const m12 = t * A[0][1];
+  const m21 = t * A[1][0];
+  const m22 = 1 - t + t * A[1][1];
+
+  const maxCoord = Math.max(
+    2.4,
+    Math.abs(A[0][0]) + Math.abs(A[0][1]),
+    Math.abs(A[1][0]) + Math.abs(A[1][1]),
+  );
+  const unit = Math.min(54, Math.max(24, Math.min(w, h) / (maxCoord * 2.35)));
+  const cx = w * 0.5;
+  const cy = h * 0.52;
+
+  const toScreen = (wx, wy) => [cx + wx * unit, cy - wy * unit];
+  const mapVec = (gx, gy) => [m11 * gx + m12 * gy, m21 * gx + m22 * gy];
+
+  // 1. Lưới tham chiếu gốc mờ (I)
+  const gRange = Math.ceil(Math.max(w, h) / unit) + 2;
+  ctx.strokeStyle = isDark
+    ? "rgba(71, 85, 105, 0.25)"
+    : "rgba(148, 163, 184, 0.35)";
+  ctx.lineWidth = 1;
+  for (let i = -gRange; i <= gRange; i++) {
+    const [x1, y1] = toScreen(i, -gRange);
+    const [x2, y2] = toScreen(i, gRange);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    const [x3, y3] = toScreen(-gRange, i);
+    const [x4, y4] = toScreen(gRange, i);
+    ctx.beginPath();
+    ctx.moveTo(x3, y3);
+    ctx.lineTo(x4, y4);
+    ctx.stroke();
+  }
+
+  // 2. Lưới không gian sau biến đổi M(t)
+  ctx.strokeStyle = isDark
+    ? "rgba(56, 189, 248, 0.28)"
+    : "rgba(37, 99, 235, 0.24)";
+  ctx.lineWidth = 1.2;
+  const tRange = 7;
+  for (let i = -tRange; i <= tRange; i++) {
+    const [p1x, p1y] = toScreen(...mapVec(i, -tRange));
+    const [p2x, p2y] = toScreen(...mapVec(i, tRange));
+    ctx.beginPath();
+    ctx.moveTo(p1x, p1y);
+    ctx.lineTo(p2x, p2y);
+    ctx.stroke();
+
+    const [p3x, p3y] = toScreen(...mapVec(-tRange, i));
+    const [p4x, p4y] = toScreen(...mapVec(tRange, i));
+    ctx.beginPath();
+    ctx.moveTo(p3x, p3y);
+    ctx.lineTo(p4x, p4y);
+    ctx.stroke();
+  }
+
+  // Trục tọa độ chính
+  ctx.strokeStyle = isDark
+    ? "rgba(148, 163, 184, 0.55)"
+    : "rgba(71, 85, 105, 0.5)";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(0, cy);
+  ctx.lineTo(w, cy);
+  ctx.moveTo(cx, 0);
+  ctx.lineTo(cx, h);
+  ctx.stroke();
+
+  // 3. Hình bình hành diện tích |det(M(t))|
+  const detCur = m11 * m22 - m12 * m21;
+  const [oX, oY] = toScreen(0, 0);
+  const [e1X, e1Y] = toScreen(...mapVec(1, 0));
+  const [e12X, e12Y] = toScreen(...mapVec(1, 1));
+  const [e2X, e2Y] = toScreen(...mapVec(0, 1));
+
+  ctx.fillStyle =
+    Math.abs(detCur) < 1e-4
+      ? "rgba(245, 158, 11, 0.35)"
+      : detCur < 0
+        ? "rgba(239, 68, 68, 0.24)"
+        : "rgba(16, 185, 129, 0.22)";
+  ctx.strokeStyle =
+    detCur < 0 ? "rgba(239, 68, 68, 0.7)" : "rgba(16, 185, 129, 0.7)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(oX, oY);
+  ctx.lineTo(e1X, e1Y);
+  ctx.lineTo(e12X, e12Y);
+  ctx.lineTo(e2X, e2Y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // 4. Đường tròn đơn vị biến hình thành Elip
+  const showCircle =
+    document.getElementById("mat2d-show-circle")?.checked ?? true;
+  if (showCircle) {
+    ctx.strokeStyle = isDark
+      ? "rgba(168, 85, 247, 0.8)"
+      : "rgba(124, 58, 237, 0.75)";
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    for (let k = 0; k <= 64; k++) {
+      const ang = (k / 64) * Math.PI * 2;
+      const [sx, sy] = toScreen(...mapVec(Math.cos(ang), Math.sin(ang)));
+      if (k === 0) ctx.moveTo(sx, sy);
+      else ctx.lineTo(sx, sy);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  // 5. Đường phương & Vector riêng (Eigenvectors) bất biến của A
+  const eigen = compute2DEigenData(A);
+  if (eigen.isReal) {
+    eigen.pairs.forEach((pair, idx) => {
+      const { x: vx, y: vy } = pair.vec;
+      const color = idx === 0 ? "#f59e0b" : "#ec4899";
+
+      // Đường thẳng phương bất biến (Eigenspan)
+      const [lx1, ly1] = toScreen(-vx * 12, -vy * 12);
+      const [lx2, ly2] = toScreen(vx * 12, vy * 12);
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = 0.45;
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      ctx.moveTo(lx1, ly1);
+      ctx.lineTo(lx2, ly2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+
+      // Mũi tên vector riêng sau biến đổi M(t)v
+      const scaleCur = 1 - t + t * pair.lambda;
+      const [ex, ey] = toScreen(vx * scaleCur, vy * scaleCur);
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.moveTo(oX, oY);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(ex, ey, 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
+  // 6. Cặp vector cơ sở T(e1) và T(e2)
+  const drawArrow = (tx, ty, color, label) => {
+    const ang = Math.atan2(ty - oY, tx - oX);
+    const headLen = 9;
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 2.8;
+    ctx.beginPath();
+    ctx.moveTo(oX, oY);
+    ctx.lineTo(tx, ty);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(tx, ty);
+    ctx.lineTo(
+      tx - headLen * Math.cos(ang - Math.PI / 6),
+      ty - headLen * Math.sin(ang - Math.PI / 6),
+    );
+    ctx.lineTo(
+      tx - headLen * Math.cos(ang + Math.PI / 6),
+      ty - headLen * Math.sin(ang + Math.PI / 6),
+    );
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.font = "bold 11px monospace";
+    ctx.fillText(label, tx + 6, ty - 6);
+  };
+
+  drawArrow(e1X, e1Y, "#10b981", "T(e₁)");
+  drawArrow(e2X, e2Y, "#38bdf8", "T(e₂)");
+
+  // 7. Điểm dò tọa độ khi rê chuột (v -> Av)
+  if (mat2DStageState.hoverWorld) {
+    const { wx, wy } = mat2DStageState.hoverWorld;
+    const [hx, hy] = toScreen(wx, wy);
+    const [mx, my] = mapVec(wx, wy);
+    const [tx, ty] = toScreen(mx, my);
+
+    ctx.strokeStyle = "rgba(148, 163, 184, 0.65)";
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(hx, hy);
+    ctx.lineTo(tx, ty);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = "#94a3b8";
+    ctx.beginPath();
+    ctx.arc(hx, hy, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#38bdf8";
+    ctx.beginPath();
+    ctx.arc(tx, ty, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    const hud = `v(${formatNum(wx)}, ${formatNum(wy)}) ↦ (${formatNum(mx)}, ${formatNum(my)})`;
+    ctx.font = "bold 11px monospace";
+    const tw = ctx.measureText(hud).width;
+    ctx.fillStyle = isDark ? "rgba(15,23,42,0.88)" : "rgba(255,255,255,0.92)";
+    ctx.fillRect(8, h - 28, tw + 14, 20);
+    ctx.fillStyle = isDark ? "#7dd3fc" : "#0369a1";
+    ctx.fillText(hud, 15, h - 14);
+  }
+
+  if (infoBar) {
+    const detStatus =
+      Math.abs(eigen.det) < 1e-6
+        ? `<span style="color:#f59e0b; font-weight:700;">det(A) = 0 (Suy biến — ép phẳng chiều)</span>`
+        : eigen.det < 0
+          ? `<span style="color:#ef4444; font-weight:700;">det(A) = ${formatNum(eigen.det)} (Đảo chiều mặt phẳng)</span>`
+          : `<span style="color:#10b981; font-weight:700;">det(A) = ${formatNum(eigen.det)} (Diện tích gấp ${formatNum(Math.abs(eigen.det))}×)</span>`;
+
+    const eigenHtml = eigen.isReal
+      ? eigen.pairs
+          .map(
+            (p, idx) =>
+              `<span style="color:${idx === 0 ? "#f59e0b" : "#ec4899"}; font-weight:700;">λ${idx + 1} = ${formatNum(p.lambda)}</span> <code>v${idx + 1}≈(${formatNum(p.vec.x)}, ${formatNum(p.vec.y)})</code>`,
+          )
+          .join(" &nbsp;|&nbsp; ")
+      : `<span style="color:#a855f7; font-weight:700;">Trị riêng phức λ = ${formatNum(eigen.re)} ± ${formatNum(eigen.im)}i (Phép quay — không có phương bất biến thực)</span>`;
+
+    infoBar.innerHTML = `<div style="margin-bottom:3px;">${detStatus}</div><div>${eigenHtml}</div>`;
+  }
+}
+
+function update2DMatrixStage(rows, cols, A) {
+  const out = document.getElementById("matrix-output");
+  if (!out || !out.parentElement) return;
+
+  let box = document.getElementById("mat2d-stage-box");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "mat2d-stage-box";
+    box.style.cssText =
+      "margin-bottom:14px; padding:12px; border-radius:12px; background:var(--bg-surface-alt); border:1px solid var(--border-color);";
+    box.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
+        <strong style="color:var(--primary); font-size:0.9rem;">🔷 Sân khấu Biến đổi Tuyến tính &amp; Vector riêng 2D</strong>
+        <div style="display:flex; gap:4px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-sm btn-outline" style="padding:2px 7px; font-size:0.74rem;" onclick="apply2DTransformPreset('stretch')">Kéo giãn</button>
+          <button type="button" class="btn btn-sm btn-outline" style="padding:2px 7px; font-size:0.74rem;" onclick="apply2DTransformPreset('rotate')">Quay 45°</button>
+          <button type="button" class="btn btn-sm btn-outline" style="padding:2px 7px; font-size:0.74rem;" onclick="apply2DTransformPreset('reflect')">Phản xạ</button>
+          <button type="button" class="btn btn-sm btn-outline" style="padding:2px 7px; font-size:0.74rem;" onclick="apply2DTransformPreset('singular')">Suy biến</button>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; font-size:0.8rem;">
+        <span style="font-weight:700; font-family:var(--font-mono);">t = <span id="mat2d-t-label" style="color:var(--primary);">100%</span></span>
+        <input type="range" id="mat2d-morph-slider" min="0" max="100" value="100" oninput="on2DMorphSliderInput(this.value)" style="flex:1; min-width:110px;">
+        <button type="button" class="btn btn-sm btn-secondary" id="mat2d-play-btn" onclick="play2DMatrixMorph()" style="padding:3px 9px;">▶️ Biến hình</button>
+        <label style="display:flex; align-items:center; gap:4px; cursor:pointer;">
+          <input type="checkbox" id="mat2d-show-circle" checked onchange="render2DMatrixTransformCanvas()">
+          <span>Đường tròn đơn vị</span>
+        </label>
+      </div>
+      <div style="border-radius:10px; overflow:hidden; border:1px solid var(--border-color);">
+        <canvas id="mat2d-transform-canvas" style="display:block; width:100%; height:290px; cursor:crosshair;"></canvas>
+      </div>
+      <div id="mat2d-eigen-readout" style="margin-top:8px; font-size:0.82rem; line-height:1.5;"></div>
+    `;
+    out.parentElement.insertBefore(box, out);
+
+    const cvs = document.getElementById("mat2d-transform-canvas");
+    if (cvs) {
+      cvs.addEventListener("mousemove", (e) => {
+        const rect = cvs.getBoundingClientRect();
+        const px =
+          ((e.clientX - rect.left) / Math.max(1, rect.width)) * cvs.width;
+        const py =
+          ((e.clientY - rect.top) / Math.max(1, rect.height)) * cvs.height;
+        const m = mat2DStageState.matrix;
+        const maxC = Math.max(
+          2.4,
+          Math.abs(m[0][0]) + Math.abs(m[0][1]),
+          Math.abs(m[1][0]) + Math.abs(m[1][1]),
+        );
+        const unit = Math.min(
+          54,
+          Math.max(24, Math.min(cvs.width, cvs.height) / (maxC * 2.35)),
+        );
+        mat2DStageState.hoverWorld = {
+          wx: (px - cvs.width * 0.5) / unit,
+          wy: (cvs.height * 0.52 - py) / unit,
+        };
+        render2DMatrixTransformCanvas();
+      });
+      cvs.addEventListener("mouseleave", () => {
+        mat2DStageState.hoverWorld = null;
+        render2DMatrixTransformCanvas();
+      });
+    }
+  }
+
+  if (rows === 2 && cols === 2) {
+    box.style.display = "block";
+    mat2DStageState.matrix = [
+      [A[0][0], A[0][1]],
+      [A[1][0], A[1][1]],
+    ];
+    render2DMatrixTransformCanvas();
+  } else {
+    box.style.display = "none";
+  }
+}
+
 function initMatrixLabUI() {
   const sizeSelect = document.getElementById("matrix-size");
   const gridContainer = document.getElementById("matrix-input-grid");
   const ctrlSlot = document.getElementById("matrix-custom-controls");
   if (!sizeSelect || !gridContainer) return;
 
+  ensure2x2MatrixOption();
+
   if (ctrlSlot && !document.getElementById("opt-mat-det")) {
     ctrlSlot.innerHTML = `
       <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;">
+        <button type="button" class="btn btn-sm btn-primary" onclick="apply2DTransformPreset('stretch')">🔷 Mẫu 2×2 (Biến hình)</button>
         <button type="button" class="btn btn-sm btn-outline" onclick="fillMatrixPreset('sample')">📘 Mẫu giáo trình</button>
         <button type="button" class="btn btn-sm btn-outline" onclick="fillMatrixPreset('random')">🎲 Ngẫu nhiên</button>
         <button type="button" class="btn btn-sm btn-outline" onclick="fillMatrixPreset('identity')">🆔 Đơn vị / Bậc thang</button>
@@ -1328,6 +2461,11 @@ function initMatrixLabUI() {
         </div>
       </div>
     `;
+  }
+
+  if (gridContainer.dataset.liveBound !== "1") {
+    gridContainer.dataset.liveBound = "1";
+    gridContainer.addEventListener("input", () => analyzeMatrix());
   }
 
   renderMatrixGrid();
@@ -1570,6 +2708,13 @@ function analyzeMatrix() {
     }
   }
 
+  if (rows !== 2 || cols !== 2) {
+    html =
+      `<div style="padding:7px 10px; margin-bottom:10px; border-radius:8px; background:var(--bg-body); border:1px dashed var(--border-color); font-size:0.82rem; color:var(--text-secondary);">💡 Chọn kích thước <strong>2 × 2</strong> (hoặc bấm <strong>🔷 Mẫu 2×2</strong>) để mở <em>Sân khấu Biến đổi Tuyến tính &amp; Vector riêng 2D</em> trực quan.</div>` +
+      html;
+  }
+
+  update2DMatrixStage(rows, cols, A);
   out.innerHTML =
     html || "<p>Hãy tick chọn ít nhất 1 phép tính ở bảng bên trái.</p>";
   if (typeof renderMath === "function") renderMath(out);
@@ -1578,6 +2723,136 @@ function analyzeMatrix() {
 /* ==========================================================================
    3. GIẢI HỆ PHƯƠNG TRÌNH TUYẾN TÍNH TỔNG QUÁT m PT × n ẨN (AX = b)
    ========================================================================== */
+const gaussStepperState = {
+  steps: [],
+  currentIdx: 0,
+  timer: null,
+};
+
+function renderGaussStepView() {
+  const host = document.getElementById("gauss-stepper-host");
+  if (!host || gaussStepperState.steps.length === 0) return;
+
+  const total = gaussStepperState.steps.length - 1;
+  const idx = Math.max(0, Math.min(total, gaussStepperState.currentIdx));
+  gaussStepperState.currentIdx = idx;
+  const snap = gaussStepperState.steps[idx];
+
+  const badgeEl = document.getElementById("gauss-step-badge");
+  const opEl = document.getElementById("gauss-step-op");
+  const sliderEl = document.getElementById("gauss-step-slider");
+  const tableEl = document.getElementById("gauss-step-matrix");
+
+  if (badgeEl) {
+    badgeEl.textContent =
+      idx === 0
+        ? `Bước 0 / ${total} (Ban đầu)`
+        : idx === total
+          ? `Bước ${idx} / ${total} (RREF hoàn tất)`
+          : `Bước ${idx} / ${total}`;
+  }
+  if (sliderEl) {
+    sliderEl.max = String(total);
+    sliderEl.value = String(idx);
+  }
+  if (opEl) {
+    opEl.innerHTML = snap.opHtml;
+  }
+
+  if (tableEl) {
+    const M = snap.matrix;
+    const m = M.length;
+    const nCols = M[0]?.length || 0;
+    const nVars = nCols - 1;
+
+    let rowsHtml = "";
+    for (let r = 0; r < m; r++) {
+      const isTarget = snap.targetRow === r;
+      const isPivotRow = snap.pivot && snap.pivot.r === r;
+      const rowBg = isTarget
+        ? "background:rgba(245, 158, 11, 0.14);"
+        : isPivotRow
+          ? "background:rgba(56, 189, 248, 0.08);"
+          : "";
+
+      let cellsHtml = `<td style="padding:5px 7px; font-size:0.74rem; color:var(--text-muted); font-family:var(--font-mono); user-select:none;">d<sub>${r + 1}</sub></td>`;
+      for (let c = 0; c < nCols; c++) {
+        const isAugCol = c === nVars;
+        const isPivotCell =
+          snap.pivot && snap.pivot.r === r && snap.pivot.c === c;
+        const dividerStyle = isAugCol
+          ? "border-left:2px dashed var(--primary); padding-left:12px;"
+          : "";
+        const pivotStyle = isPivotCell
+          ? "background:rgba(14, 165, 233, 0.24); color:var(--primary); font-weight:800; border-radius:6px; box-shadow:inset 0 0 0 1.5px var(--primary);"
+          : isAugCol
+            ? "font-weight:700;"
+            : "";
+
+        cellsHtml += `<td style="padding:5px 9px; text-align:right; font-family:var(--font-mono); font-size:0.86rem; ${dividerStyle} ${pivotStyle}">${formatNum(M[r][c])}</td>`;
+      }
+      rowsHtml += `<tr style="${rowBg} transition:background 0.18s ease;">${cellsHtml}</tr>`;
+    }
+
+    tableEl.innerHTML = `
+      <div style="display:inline-block; padding:6px 10px; border-left:2.5px solid var(--text-primary); border-right:2.5px solid var(--text-primary); border-radius:8px; background:var(--bg-surface);">
+        <table style="border-collapse:separate; border-spacing:2px 3px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+}
+
+function goToGaussStep(idx, playSound = true) {
+  if (gaussStepperState.steps.length === 0) return;
+  const total = gaussStepperState.steps.length - 1;
+  const clamped = Math.max(0, Math.min(total, parseInt(idx, 10) || 0));
+  if (clamped !== gaussStepperState.currentIdx && playSound) {
+    window.MathLabSound?.tick?.();
+  }
+  gaussStepperState.currentIdx = clamped;
+  renderGaussStepView();
+}
+
+function stepGaussElim(delta) {
+  if (gaussStepperState.timer) {
+    clearInterval(gaussStepperState.timer);
+    gaussStepperState.timer = null;
+    const btn = document.getElementById("gauss-auto-btn");
+    if (btn) btn.textContent = "▶️ Tự động tua";
+  }
+  goToGaussStep(gaussStepperState.currentIdx + delta, true);
+}
+
+function toggleGaussAutoPlay() {
+  const btn = document.getElementById("gauss-auto-btn");
+  if (gaussStepperState.timer) {
+    clearInterval(gaussStepperState.timer);
+    gaussStepperState.timer = null;
+    if (btn) btn.textContent = "▶️ Tự động tua";
+    return;
+  }
+
+  const total = gaussStepperState.steps.length - 1;
+  if (total <= 0) return;
+  if (gaussStepperState.currentIdx >= total) {
+    gaussStepperState.currentIdx = 0;
+    renderGaussStepView();
+  }
+
+  if (btn) btn.textContent = "⏸️ Dừng tua";
+  gaussStepperState.timer = setInterval(() => {
+    if (gaussStepperState.currentIdx >= total) {
+      clearInterval(gaussStepperState.timer);
+      gaussStepperState.timer = null;
+      if (btn) btn.textContent = "▶️ Tự động tua";
+      return;
+    }
+    goToGaussStep(gaussStepperState.currentIdx + 1, true);
+  }, 750);
+}
+
 function initSystemLabUI() {
   const sysSelect = document.getElementById("sys-size");
   const gridContainer = document.getElementById("sys-input-grid");
@@ -1593,6 +2868,11 @@ function initSystemLabUI() {
         <button type="button" class="btn btn-sm btn-outline" onclick="loadSystemPreset('homogeneous')">0️⃣ Thuần nhất AX = 0</button>
       </div>
     `;
+  }
+
+  if (gridContainer.dataset.liveBound !== "1") {
+    gridContainer.dataset.liveBound = "1";
+    gridContainer.addEventListener("input", () => solveLinearSystem());
   }
 
   renderSystemGrid();
@@ -1692,11 +2972,24 @@ function solveLinearSystem() {
     if (r < m && c <= n) orig[r][c] = parseFloat(inp.value) || 0;
   });
 
-  // Đưa [A | b] về dạng bậc thang rút gọn (RREF) bằng Gauss-Jordan
+  if (gaussStepperState.timer) {
+    clearInterval(gaussStepperState.timer);
+    gaussStepperState.timer = null;
+  }
+
+  // Đưa [A | b] về dạng bậc thang rút gọn (RREF) bằng Gauss-Jordan và lưu từng bước
   const M = orig.map((row) => [...row]);
+  const snapshots = [
+    {
+      matrix: M.map((r) => [...r]),
+      opHtml: `<span style="color:var(--text-secondary);">Ma trận mở rộng ban đầu <code>[A | b]</code> trước khi khử</span>`,
+      pivot: null,
+      targetRow: -1,
+    },
+  ];
+
   let row = 0;
   const pivotCols = [];
-  const elimSteps = [];
 
   for (let col = 0; col < n && row < m; col++) {
     let maxR = row;
@@ -1707,22 +3000,41 @@ function solveLinearSystem() {
 
     if (maxR !== row) {
       [M[row], M[maxR]] = [M[maxR], M[row]];
-      elimSteps.push(`d${row + 1} ↔ d${maxR + 1}`);
+      snapshots.push({
+        matrix: M.map((r) => [...r]),
+        opHtml: `🔀 Đổi chỗ hai hàng: <code>d<sub>${row + 1}</sub> ↔ d<sub>${maxR + 1}</sub></code> (đưa phần tử trụ lên vị trí <code>(${row + 1}, ${col + 1})</code>)`,
+        pivot: { r: row, c: col },
+        targetRow: row,
+      });
     }
     const piv = M[row][col];
     if (Math.abs(piv - 1) > 1e-9) {
       for (let c = col; c <= n; c++) M[row][c] /= piv;
-      elimSteps.push(`d${row + 1} → (1/${formatNum(piv)})d${row + 1}`);
+      snapshots.push({
+        matrix: M.map((r) => [...r]),
+        opHtml: `➗ Chuẩn hóa phần tử trụ về 1: <code>d<sub>${row + 1}</sub> → (1 / ${formatNum(piv)}) · d<sub>${row + 1}</sub></code>`,
+        pivot: { r: row, c: col },
+        targetRow: row,
+      });
     }
     for (let r = 0; r < m; r++) {
       if (r === row || Math.abs(M[r][col]) < 1e-9) continue;
       const f = M[r][col];
       for (let c = col; c <= n; c++) M[r][c] -= f * M[row][c];
-      elimSteps.push(`d${r + 1} → d${r + 1} - (${formatNum(f)})d${row + 1}`);
+      const signOp = f >= 0 ? "-" : "+";
+      snapshots.push({
+        matrix: M.map((rItem) => [...rItem]),
+        opHtml: `⚡ Khử cột ${col + 1}: <code>d<sub>${r + 1}</sub> → d<sub>${r + 1}</sub> ${signOp} (${formatNum(Math.abs(f))}) · d<sub>${row + 1}</sub></code>`,
+        pivot: { r: row, c: col },
+        targetRow: r,
+      });
     }
     pivotCols.push(col);
     row++;
   }
+
+  gaussStepperState.steps = snapshots;
+  gaussStepperState.currentIdx = snapshots.length - 1;
 
   const rankA = pivotCols.length;
   let rankAb = rankA;
@@ -1807,8 +3119,26 @@ function solveLinearSystem() {
     `;
   }
 
-  html += `<div>• <strong>Ma trận mở rộng dạng bậc thang rút gọn (RREF):</strong><pre style="margin-top:6px; padding:10px; border-radius:8px; background:var(--bg-body); overflow-x:auto;">${formatMatrixText(M)}</pre></div>`;
+  html += `
+    <div id="gauss-stepper-host" style="margin-top:10px; padding:12px; border-radius:12px; background:var(--bg-body); border:1px solid var(--border-color);">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
+        <strong style="color:var(--primary); font-size:0.88rem;">🎬 Máy tua Khử Gauss–Jordan từng bước</strong>
+        <span id="gauss-step-badge" style="padding:2px 8px; border-radius:6px; background:rgba(14,165,233,0.14); color:var(--primary); font-family:var(--font-mono); font-size:0.76rem; font-weight:700;"></span>
+      </div>
+      <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:8px;">
+        <button type="button" class="btn btn-sm btn-outline" title="Về ma trận ban đầu" onclick="goToGaussStep(0)" style="padding:3px 8px; font-family:var(--font-mono);">⏮</button>
+        <button type="button" class="btn btn-sm btn-outline" title="Lùi 1 bước" onclick="stepGaussElim(-1)" style="padding:3px 9px; font-family:var(--font-mono);">◀ Lùi</button>
+        <input type="range" id="gauss-step-slider" min="0" max="0" value="0" oninput="goToGaussStep(this.value)" style="flex:1; min-width:90px;">
+        <button type="button" class="btn btn-sm btn-outline" title="Tiến 1 bước" onclick="stepGaussElim(1)" style="padding:3px 9px; font-family:var(--font-mono);">Tiến ▶</button>
+        <button type="button" class="btn btn-sm btn-outline" title="Đến bước cuối RREF" onclick="goToGaussStep(999)" style="padding:3px 8px; font-family:var(--font-mono);">⏭</button>
+        <button type="button" class="btn btn-sm btn-secondary" id="gauss-auto-btn" onclick="toggleGaussAutoPlay()" style="padding:3px 9px;">▶️ Tự động tua</button>
+      </div>
+      <div id="gauss-step-op" style="margin-bottom:8px; padding:6px 10px; border-radius:8px; background:var(--bg-surface-alt); font-size:0.82rem;"></div>
+      <div id="gauss-step-matrix" style="overflow-x:auto;"></div>
+    </div>
+  `;
   out.innerHTML = html;
+  renderGaussStepView();
 }
 
 /* ==========================================================================
@@ -2365,6 +3695,16 @@ function exposeMathLabGlobals() {
   window.exportCalculusPNG = exportCalculusPNG;
   window.switchCalcViewMode = switchCalcViewMode;
   window.initGraphLabUI = initGraphLabUI;
+  window.apply2DTransformPreset = apply2DTransformPreset;
+  window.on2DMorphSliderInput = on2DMorphSliderInput;
+  window.play2DMatrixMorph = play2DMatrixMorph;
+  window.render2DMatrixTransformCanvas = render2DMatrixTransformCanvas;
+  window.goToGaussStep = goToGaussStep;
+  window.stepGaussElim = stepGaussElim;
+  window.toggleGaussAutoPlay = toggleGaussAutoPlay;
+  window.onRiemannInput = onRiemannInput;
+  window.stepRiemannN = stepRiemannN;
+  window.toggleRiemannAnimation = toggleRiemannAnimation;
 }
 
 exposeMathLabGlobals();

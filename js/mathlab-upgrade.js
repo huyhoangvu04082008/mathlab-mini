@@ -297,30 +297,44 @@
 
   function observeStudyModal() {
     const studyModal = document.getElementById("study-modal");
-    if (!studyModal) return;
+    const studyModalBody = document.getElementById("study-modal-body");
+    if (!studyModal || !studyModalBody) return;
+
+    const scrollToUnit = (targetId) => {
+      const wrapper = document.getElementById("study-modal-body-wrapper");
+      const target = document.getElementById(targetId);
+      if (!wrapper || !target) return;
+      const wrapRect = wrapper.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      wrapper.scrollTo({
+        top: Math.max(
+          0,
+          wrapper.scrollTop + (targetRect.top - wrapRect.top) - 14,
+        ),
+        behavior: "smooth",
+      });
+    };
 
     const attachSectionButtons = () => {
-      const modalHeadings = Array.from(
-        studyModal.querySelectorAll(".unit-header, h2, h3, h4"),
-      ).filter((h) => /^\d+\.\s+/.test((h.textContent || "").trim()));
+      const unitBlocks = Array.from(
+        studyModalBody.querySelectorAll('.unit-block[id^="unit-sec-"]'),
+      );
+      if (!unitBlocks.length) return;
 
-      modalHeadings.forEach((heading) => {
-        const sectionBox =
-          heading.closest(".unit-block") || heading.parentElement;
-        if (!sectionBox || sectionBox.dataset.hasCompleteBtn === "1") return;
+      const modalTitleEl = studyModal.querySelector(
+        "#study-modal-title, h2, h3",
+      );
+      const chapName = modalTitleEl
+        ? modalTitleEl.textContent.trim()
+        : "General";
+      const completedMap = getCompletedSections();
 
+      unitBlocks.forEach((sectionBox, idx) => {
+        if (sectionBox.dataset.hasCompleteBtn === "1") return;
         sectionBox.dataset.hasCompleteBtn = "1";
-        const modalTitleEl = studyModal.querySelector(
-          "#study-modal-title, h2, h3",
-        );
-        const chapName = modalTitleEl
-          ? modalTitleEl.textContent.trim()
-          : "General";
-        // Dùng sectionBox.id (unit-sec-0, unit-sec-1...) để khớp tuyệt đối với mục lục
-        const secId = sectionBox.id || heading.textContent.trim();
-        const key = `chap_${chapName}::${secId}`;
 
-        const completedMap = getCompletedSections();
+        const secId = sectionBox.id;
+        const key = `chap_${chapName}::${secId}`;
         const isDone = !!completedMap[key];
 
         const toggleBtn = document.createElement("button");
@@ -340,7 +354,46 @@
             : "○ Đánh dấu đã học xong phần này (+5 XP)";
         });
 
-        sectionBox.appendChild(toggleBtn);
+        const actionsBar = document.createElement("div");
+        actionsBar.className = "ml-unit-actions";
+        actionsBar.appendChild(toggleBtn);
+
+        const navGroup = document.createElement("div");
+        navGroup.style.cssText = "display:flex; gap:8px; flex-wrap:wrap;";
+
+        if (idx > 0) {
+          const prevBtn = document.createElement("button");
+          prevBtn.type = "button";
+          prevBtn.className = "btn btn-sm btn-outline";
+          prevBtn.textContent = `⬅️ Phần ${idx}`;
+          prevBtn.addEventListener("click", () =>
+            scrollToUnit(unitBlocks[idx - 1].id),
+          );
+          navGroup.appendChild(prevBtn);
+        }
+
+        if (idx < unitBlocks.length - 1) {
+          const nextBtn = document.createElement("button");
+          nextBtn.type = "button";
+          nextBtn.className = "btn btn-sm btn-outline";
+          nextBtn.textContent = `Phần ${idx + 2} ➡️`;
+          nextBtn.addEventListener("click", () =>
+            scrollToUnit(unitBlocks[idx + 1].id),
+          );
+          navGroup.appendChild(nextBtn);
+        } else if (document.getElementById("unit-key-summary")) {
+          const sumBtn = document.createElement("button");
+          sumBtn.type = "button";
+          sumBtn.className = "btn btn-sm btn-outline";
+          sumBtn.textContent = "📌 Tổng hợp cuối chương ➡️";
+          sumBtn.addEventListener("click", () =>
+            scrollToUnit("unit-key-summary"),
+          );
+          navGroup.appendChild(sumBtn);
+        }
+
+        actionsBar.appendChild(navGroup);
+        sectionBox.appendChild(actionsBar);
       });
     };
 
@@ -350,12 +403,11 @@
       secRaf = true;
       requestAnimationFrame(() => {
         secRaf = false;
-        observer.disconnect();
         attachSectionButtons();
-        observer.observe(studyModal, { childList: true, subtree: true });
       });
     });
-    observer.observe(studyModal, { childList: true, subtree: true });
+    observer.observe(studyModalBody, { childList: true });
+    attachSectionButtons();
   }
 
   function observeDynamicGrids() {
@@ -672,12 +724,7 @@
         if (el.scrollHeight <= el.clientHeight + 2) return false;
         if (deltaY === 0) return true;
         if (deltaY < 0) return el.scrollTop > 0;
-        const prevTop = el.scrollTop;
-        if (prevTop + el.clientHeight >= el.scrollHeight - 1) return false;
-        el.scrollTop = prevTop + 1;
-        const didMove = el.scrollTop !== prevTop;
-        if (didMove) el.scrollTop = prevTop;
-        return didMove;
+        return el.scrollTop + el.clientHeight < el.scrollHeight - 1;
       };
 
       const OVERLAY_SELECTOR =
@@ -895,7 +942,7 @@
       });
     })();
 
-    // Bi-directional Scroll Reveal (Giữ ổn định các khối lớn như Phòng Lab #math-lab)
+    // Bi-directional Scroll Reveal 2 chiều (lướt lên trượt xuống, lướt xuống trồi lên — trừ #math-lab)
     const revealSelector =
       ".topic-card, .stat-item, .contrib-hub-card, .forum-post, .xp-banner, .card, .lab-wrapper, .section-header";
 
@@ -914,18 +961,20 @@
           } else {
             if (
               el.classList.contains("lab-wrapper") ||
-              el.offsetHeight > window.innerHeight * 0.75
+              el.offsetHeight > window.innerHeight * 1.45
             ) {
               return;
             }
             el.style.setProperty("--ml-delay", "0ms");
-            const exitDir = entry.boundingClientRect.top < 0 ? "-22px" : "28px";
+            const rootTop = entry.rootBounds ? entry.rootBounds.top : 74;
+            const exitDir =
+              entry.boundingClientRect.top < rootTop ? "-28px" : "28px";
             el.style.setProperty("--ml-dir", exitDir);
             el.classList.remove("ml-in-view");
           }
         });
       },
-      { threshold: 0.01 },
+      { rootMargin: "-74px 0px -18px 0px", threshold: 0.01 },
     );
 
     const scanRevealTargets = () => {
@@ -1008,19 +1057,18 @@
   }
 
   /* =========================================================
-     D. GLOBAL INTERACTIVE MATH MESH & CURSOR SPOTLIGHT CANVAS
+     D. FULL-BLEED INTERACTIVE VECTOR FIELD & CONTOUR FLOW
      ========================================================= */
   function initHeroMathCanvas() {
     if (!document.body || document.getElementById("ml-global-math-canvas"))
       return;
 
-    // 1. Quầng sáng Spotlight GPU phần cứng (Chạy độc lập trên Compositor — Không nghẽn Canvas)
     let spotlight = document.getElementById("ml-cursor-spotlight");
     if (!spotlight) {
       spotlight = document.createElement("div");
       spotlight.id = "ml-cursor-spotlight";
       spotlight.style.cssText =
-        "position:fixed; width:580px; height:580px; top:-290px; left:-290px; border-radius:50%; pointer-events:none; z-index:0; opacity:0; will-change:transform; transition:opacity 0.28s ease; mix-blend-mode:screen;";
+        "position:fixed; width:560px; height:560px; top:-280px; left:-280px; border-radius:50%; pointer-events:none; z-index:0; opacity:0; will-change:transform; transition:opacity 0.28s ease;";
       document.body.prepend(spotlight);
     }
 
@@ -1028,20 +1076,29 @@
     canvas.id = "ml-global-math-canvas";
     document.body.prepend(canvas);
 
+    let hud = document.getElementById("ml-canvas-hud");
+    if (!hud) {
+      hud = document.createElement("div");
+      hud.id = "ml-canvas-hud";
+      hud.textContent = "Trường Vector • ∇f(x, y)";
+      document.body.appendChild(hud);
+    }
+
     const ctx = canvas.getContext("2d");
-    const SYMBOLS = ["∫", "∑", "lim", "∂", "det", "∇", "∀", "∞", "ℝⁿ", "π"];
 
     let width = 0;
     let height = 0;
-    let particles = [];
+    let smoothScrollP = 0;
+    let lastHudStage = "";
     const pointer = { x: -9999, y: -9999, active: false };
 
     function syncSpotlightTheme() {
       const isDark =
         document.documentElement.getAttribute("data-theme") === "dark";
+      spotlight.style.mixBlendMode = isDark ? "screen" : "multiply";
       spotlight.style.background = isDark
-        ? "radial-gradient(circle, rgba(56, 189, 248, 0.26) 0%, rgba(99, 102, 241, 0.14) 42%, transparent 70%)"
-        : "radial-gradient(circle, rgba(37, 99, 235, 0.18) 0%, rgba(14, 165, 233, 0.08) 42%, transparent 70%)";
+        ? "radial-gradient(circle, rgba(56, 189, 248, 0.24) 0%, rgba(99, 102, 241, 0.12) 45%, transparent 70%)"
+        : "radial-gradient(circle, rgba(37, 99, 235, 0.13) 0%, rgba(13, 148, 136, 0.07) 45%, transparent 70%)";
     }
     syncSpotlightTheme();
 
@@ -1059,16 +1116,6 @@
       canvas.width = Math.floor(width * dpr);
       canvas.height = Math.floor(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      const count = width < 768 ? 22 : 36;
-      particles = Array.from({ length: count }, (_, i) => ({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.38,
-        vy: (Math.random() - 0.5) * 0.38,
-        radius: Math.random() * 1.6 + 1.2,
-        symbol: i % 3 === 0 ? SYMBOLS[i % SYMBOLS.length] : null,
-      }));
     }
 
     resizeCanvas();
@@ -1131,87 +1178,269 @@
         isHoveringLab
       ) {
         if (spotlight.style.opacity !== "0") spotlight.style.opacity = "0";
+        hud.style.opacity = cachedModalOpen ? "0" : "1";
         return;
       }
 
+      hud.style.opacity = "1";
+      const maxScroll = Math.max(
+        1,
+        document.documentElement.scrollHeight - window.innerHeight,
+      );
+      const targetScrollP = Math.min(
+        1,
+        Math.max(0, window.scrollY / maxScroll),
+      );
+      smoothScrollP += (targetScrollP - smoothScrollP) * 0.08;
+
       const isDark =
         document.documentElement.getAttribute("data-theme") === "dark";
+      const t = now * 0.001;
+
       ctx.clearRect(0, 0, width, height);
 
-      ctx.font = '700 14px "JetBrains Mono", monospace';
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
+      // 1. Sóng đường đồng mức biên màn hình (chạy dọc toàn viewport, biến pha theo cú cuộn)
+      const waveCount = 4;
+      for (let wIdx = 0; wIdx < waveCount; wIdx++) {
+        const baseY = height * (0.16 + wIdx * 0.23);
+        const amp = 26 + wIdx * 7;
+        const freq = 0.0032 + wIdx * 0.0007;
+        const phase =
+          t * (0.45 + wIdx * 0.12) + smoothScrollP * 5.2 + wIdx * 1.4;
 
-      const lineRgb = isDark ? "56, 189, 248" : "37, 99, 235";
-      const pointerLineRgb = isDark ? "125, 211, 252" : "2, 132, 199";
-      const symbolColor = isDark
-        ? "rgba(125, 211, 252, 0.7)"
-        : "rgba(37, 99, 235, 0.55)";
-      const dotColor = isDark
-        ? "rgba(56, 189, 248, 0.85)"
-        : "rgba(37, 99, 235, 0.7)";
-
-      const pLen = particles.length;
-      for (let i = 0; i < pLen; i++) {
-        const p = particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-
-        if (p.x < -20) p.x = width + 20;
-        if (p.x > width + 20) p.x = -20;
-        if (p.y < -20) p.y = height + 20;
-        if (p.y > height + 20) p.y = -20;
-
-        // Bounding-box pre-filter: Loại trừ nhanh các hạt ở xa trước khi tính căn bậc hai (Tối ưu 120 FPS)
-        for (let j = i + 1; j < pLen; j++) {
-          const q = particles[j];
-          const dx = p.x - q.x;
-          const dy = p.y - q.y;
-          if (Math.abs(dx) > 140 || Math.abs(dy) > 140) continue;
-          const dist = Math.hypot(dx, dy);
-          if (dist < 140) {
-            const alpha = (1 - dist / 140) * (isDark ? 0.35 : 0.22);
-            ctx.strokeStyle = `rgba(${lineRgb}, ${alpha.toFixed(3)})`;
-            ctx.lineWidth = 1.1;
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
-            ctx.lineTo(q.x, q.y);
-            ctx.stroke();
-          }
+        ctx.strokeStyle = isDark
+          ? wIdx % 2 === 0
+            ? "rgba(56, 189, 248, 0.16)"
+            : "rgba(129, 140, 248, 0.14)"
+          : wIdx % 2 === 0
+            ? "rgba(29, 78, 216, 0.14)"
+            : "rgba(13, 148, 136, 0.13)";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        for (let px = 0; px <= width; px += 24) {
+          const py =
+            baseY +
+            Math.sin(px * freq + phase) * amp +
+            Math.cos(px * freq * 0.5 - phase * 0.7) * (amp * 0.45);
+          if (px === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
         }
+        ctx.stroke();
+      }
 
-        // Tia laser bắt dính vào con trỏ chuột
-        if (pointer.active) {
-          const mdx = p.x - pointer.x;
-          const mdy = p.y - pointer.y;
-          if (Math.abs(mdx) < 185 && Math.abs(mdy) < 185) {
-            const mDist = Math.hypot(mdx, mdy);
-            if (mDist < 185) {
-              const mAlpha = (1 - mDist / 185) * (isDark ? 0.72 : 0.52);
-              ctx.strokeStyle = `rgba(${pointerLineRgb}, ${mAlpha.toFixed(3)})`;
-              ctx.lineWidth = 1.4;
-              ctx.beginPath();
-              ctx.moveTo(p.x, p.y);
-              ctx.lineTo(pointer.x, pointer.y);
-              ctx.stroke();
+      // 2. Trường Vector toàn màn hình (xoáy theo chuột + biến thiên từ Gradient sang Tuyến tính)
+      const spacing = width < 768 ? 64 : 54;
+      const cols = Math.ceil(width / spacing) + 1;
+      const rows = Math.ceil(height / spacing) + 1;
+      const offsetX = (width - (cols - 1) * spacing) * 0.5;
+      const offsetY = (height - (rows - 1) * spacing) * 0.5;
+
+      const cx = width * 0.5;
+      const cy = height * 0.5;
+      const blend = Math.min(1, Math.max(0, (smoothScrollP - 0.3) / 0.35));
+
+      const baseVectors = [];
+      const activeVectors = [];
+
+      for (let r = 0; r < rows; r++) {
+        const y = offsetY + r * spacing;
+        const ny = (y - cy) / 220;
+        for (let c = 0; c < cols; c++) {
+          const x = offsetX + c * spacing;
+          const nx = (x - cx) / 220;
+
+          // Góc 1: Trường sóng Gradient ∇f(x,y)
+          const angGrad =
+            Math.sin(nx * 1.6 + t * 0.65 + smoothScrollP * 2.5) +
+            Math.cos(ny * 1.6 - t * 0.55);
+
+          // Góc 2: Trường biến đổi tuyến tính A·v = [-0.5x + 1.1y, -1.1x - 0.5y]
+          const vxLin = -0.45 * nx + 1.15 * ny;
+          const vyLin = -1.15 * nx - 0.45 * ny;
+          const angLin = Math.atan2(vyLin, vxLin) + Math.sin(t * 0.5) * 0.25;
+
+          let angle = angGrad * (1 - blend) + angLin * blend;
+          let len = 11;
+          let nearRatio = 0;
+
+          // Tương tác từ trường với con trỏ chuột (bán kính 230px)
+          if (pointer.active) {
+            const dx = pointer.x - x;
+            const dy = pointer.y - y;
+            if (Math.abs(dx) < 230 && Math.abs(dy) < 230) {
+              const dist = Math.hypot(dx, dy);
+              if (dist < 230 && dist > 1) {
+                nearRatio = 1 - dist / 230;
+                const toMouse = Math.atan2(dy, dx) + Math.PI * 0.22; // xoáy nhẹ quanh trỏ chuột
+                const diff = Math.atan2(
+                  Math.sin(toMouse - angle),
+                  Math.cos(toMouse - angle),
+                );
+                angle += diff * nearRatio * 0.85;
+                len += nearRatio * 8;
+              }
             }
           }
-        }
 
-        // Vẽ ký hiệu Toán học hoặc hạt nano
-        if (p.symbol) {
-          ctx.fillStyle = symbolColor;
-          ctx.fillText(p.symbol, p.x, p.y);
-        } else {
-          ctx.fillStyle = dotColor;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.radius + 0.3, 0, Math.PI * 2);
-          ctx.fill();
+          const cosA = Math.cos(angle);
+          const sinA = Math.sin(angle);
+          const item = {
+            x1: x - cosA * len * 0.5,
+            y1: y - sinA * len * 0.5,
+            x2: x + cosA * len * 0.5,
+            y2: y + sinA * len * 0.5,
+          };
+
+          if (nearRatio > 0.12) activeVectors.push(item);
+          else baseVectors.push(item);
         }
+      }
+
+      // Draw call 1: Toàn bộ nền trường vector
+      ctx.strokeStyle = isDark
+        ? "rgba(56, 189, 248, 0.22)"
+        : "rgba(29, 78, 216, 0.2)";
+      ctx.lineWidth = 1.25;
+      ctx.beginPath();
+      for (let i = 0; i < baseVectors.length; i++) {
+        const v = baseVectors[i];
+        ctx.moveTo(v.x1, v.y1);
+        ctx.lineTo(v.x2, v.y2);
+      }
+      ctx.stroke();
+
+      // Draw call 2: Các vector đang bị từ trường chuột hút/xoáy
+      if (activeVectors.length > 0) {
+        ctx.strokeStyle = isDark
+          ? "rgba(56, 189, 248, 0.78)"
+          : "rgba(2, 132, 199, 0.72)";
+        ctx.lineWidth = 1.9;
+        ctx.beginPath();
+        for (let i = 0; i < activeVectors.length; i++) {
+          const v = activeVectors[i];
+          ctx.moveTo(v.x1, v.y1);
+          ctx.lineTo(v.x2, v.y2);
+        }
+        ctx.stroke();
+      }
+
+      const stageKey = blend > 0.5 ? "linalg" : "grad";
+      if (lastHudStage !== stageKey) {
+        lastHudStage = stageKey;
+        hud.textContent =
+          stageKey === "linalg"
+            ? "Trường Biến đổi Tuyến tính • T(v) = Av"
+            : "Trường Vector & Đường đồng mức • ∇f(x, y)";
       }
     }
 
     renderLoop();
+  }
+
+  /* =========================================================
+     D2. XIMI TECH EDITIONS: FLOATING CHAPTER DOCK (THANH CHẶNG CUỘN)
+     ========================================================= */
+  function initFloatingChapterDock() {
+    if (!document.body || document.getElementById("ml-chapter-dock")) return;
+
+    const candidates = [];
+    const heroEl = document.querySelector("section.hero");
+    if (heroEl) {
+      candidates.push({ el: heroEl, label: "01. Mở đầu" });
+    }
+
+    document.querySelectorAll("section.section").forEach((sec) => {
+      let label = "";
+      if (sec.querySelector("#featured-topics-grid")) label = "02. Chuyên đề";
+      else if (sec.querySelector("#community-contribute-hub"))
+        label = "03. Đóng góp";
+      else if (sec.querySelector("#math-lab")) label = "03. Phòng Lab";
+      else {
+        const h2 = sec.querySelector("h2");
+        if (h2) {
+          const shortTitle = h2.textContent
+            .trim()
+            .split(/\s+/)
+            .slice(0, 3)
+            .join(" ");
+          label = `0${candidates.length + 1}. ${shortTitle}`;
+        }
+      }
+      if (label) candidates.push({ el: sec, label });
+    });
+
+    if (candidates.length < 2) return;
+
+    const dock = document.createElement("nav");
+    dock.id = "ml-chapter-dock";
+    dock.className = "ml-chapter-dock";
+    dock.setAttribute("aria-label", "Điều hướng nhanh các phần");
+
+    const pillBtns = candidates.map((item, idx) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "ml-dock-pill" + (idx === 0 ? " active" : "");
+      btn.textContent = item.label;
+      btn.addEventListener("click", () => {
+        const navH = document.querySelector(".navbar")?.offsetHeight || 72;
+        const top =
+          item.el.getBoundingClientRect().top + window.scrollY - navH - 10;
+        window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+      });
+      dock.appendChild(btn);
+      return { btn, el: item.el };
+    });
+
+    const cmdPill = document.createElement("button");
+    cmdPill.type = "button";
+    cmdPill.className = "ml-dock-pill";
+    cmdPill.title = "Mở bảng tìm kiếm nhanh (Ctrl + K)";
+    cmdPill.textContent = "⚡ Ctrl+K";
+    cmdPill.addEventListener("click", () => {
+      document.getElementById("ml-cmd-nav-btn")?.click();
+    });
+    dock.appendChild(cmdPill);
+
+    document.body.appendChild(dock);
+
+    let dockRaf = false;
+    const syncDockState = () => {
+      dockRaf = false;
+      const modalOpen = !!document.querySelector(
+        ".modal-backdrop.open, #study-modal.open, #topic-form-modal.open, #ml-cmd-backdrop.open",
+      );
+      dock.style.opacity = modalOpen ? "0" : "1";
+      dock.style.pointerEvents = modalOpen ? "none" : "auto";
+
+      const pivot = window.innerHeight * 0.42;
+      let activeIdx = 0;
+      pillBtns.forEach((p, idx) => {
+        const rect = p.el.getBoundingClientRect();
+        if (rect.top <= pivot) activeIdx = idx;
+      });
+      pillBtns.forEach((p, idx) => {
+        p.btn.classList.toggle("active", idx === activeIdx);
+      });
+    };
+
+    window.addEventListener(
+      "scroll",
+      () => {
+        if (!dockRaf) {
+          dockRaf = true;
+          requestAnimationFrame(syncDockState);
+        }
+      },
+      { passive: true },
+    );
+
+    const modalObserver = new MutationObserver(syncDockState);
+    modalObserver.observe(document.body, {
+      attributes: true,
+      subtree: true,
+      attributeFilter: ["class"],
+    });
+    syncDockState();
   }
 
   /* =========================================================
@@ -1566,6 +1795,13 @@
       zenBtn.innerHTML = "🧘 Zen Focus";
 
       zenBtn.addEventListener("click", () => {
+        if (!modalBody.querySelector(".section-jump-bar")) {
+          window.showToast?.(
+            "Zen Focus chỉ dùng trong tab Lý thuyết, Ví dụ & Bài tập!",
+            "info",
+          );
+          return;
+        }
         const isZen = studyModal.classList.toggle("ml-zen-mode");
         zenBtn.classList.toggle("ml-zen-on", isZen);
         zenBtn.innerHTML = isZen ? "🧘 Đang bật Zen" : "🧘 Zen Focus";
@@ -1578,7 +1814,19 @@
     function buildSideNavigatorLayout() {
       const container = modalBody.querySelector(".study-reading-container");
       const jumpBar = container?.querySelector(".section-jump-bar");
-      if (!container || !jumpBar) return;
+      const zenBtnEl = document.getElementById("study-zen-toggle-btn");
+
+      // Tự tắt Zen Mode khi qua tab Quiz hoặc Phòng Thi để không làm mờ đề
+      if (!jumpBar) {
+        if (studyModal.classList.contains("ml-zen-mode")) {
+          studyModal.classList.remove("ml-zen-mode");
+          if (zenBtnEl) {
+            zenBtnEl.classList.remove("ml-zen-on");
+            zenBtnEl.innerHTML = "🧘 Zen Focus";
+          }
+        }
+        return;
+      }
 
       // Chốt chặn: Nếu layout và sidebar đã dựng xong rồi thì chỉ cập nhật trạng thái, không đảo DOM nữa
       if (
@@ -1622,13 +1870,19 @@
             const headingText =
               secEl.querySelector(".unit-header")?.textContent.trim() ||
               `Phần ${idx + 1}`;
-            // Dùng secId đồng nhất với nút đánh dấu hoàn thành
             const key = `chap_${chapTitle}::${secId}`;
             const isDone = !!completedMap[key];
             if (isDone) doneCount++;
             return `<button type="button" class="ml-sec-pill ${isDone ? "is-done" : ""}" data-target-id="${secId}" data-sec-key="${escapeHTML(key)}" title="${escapeHTML(headingText)}">${idx + 1}</button>`;
           })
           .join("");
+
+        const pctDone = unitSections.length
+          ? Math.round((doneCount / unitSections.length) * 100)
+          : 0;
+        const firstHeading =
+          unitSections[0]?.querySelector(".unit-header")?.textContent.trim() ||
+          "Nội dung bài học";
 
         const hasExtra = !!document.getElementById("unit-extra");
         const hasSummary = !!document.getElementById("unit-key-summary");
@@ -1639,6 +1893,12 @@
             <span class="ml-sidebar-title">📑 Mục lục bài học</span>
             <span class="ml-sidebar-count" id="ml-sidebar-progress-badge">${doneCount}/${unitSections.length} xong</span>
           </div>
+          <div class="ml-sidebar-progress-track" aria-hidden="true">
+            <div class="ml-sidebar-progress-fill" id="ml-sidebar-progress-fill" style="width:${pctDone}%;"></div>
+          </div>
+          <div class="ml-sidebar-current" id="ml-sidebar-current-label" data-active-title="${escapeHTML(firstHeading)}" title="${escapeHTML(firstHeading)}">
+            📍 ${escapeHTML(firstHeading)}
+          </div>
           <div class="ml-sidebar-legend">
             <span class="ml-legend-item"><i class="ml-legend-dot" style="background:#2563eb;"></i>Đang xem</span>
             <span class="ml-legend-item"><i class="ml-legend-dot" style="background:#10b981;"></i>Đã xong</span>
@@ -1648,19 +1908,37 @@
             ${pillsHTML}
           </div>
           <div class="ml-sidebar-extras">
-            ${hasExtra ? `<button type="button" class="btn btn-sm btn-outline ml-sidebar-extra-btn" data-target-id="unit-extra">🏆 Bài tập tổng hợp nâng cao</button>` : ""}
-            ${hasSummary ? `<button type="button" class="btn btn-sm btn-outline ml-sidebar-extra-btn" data-target-id="unit-key-summary">📌 Tổng hợp công thức cuối chương</button>` : ""}
-            ${hasDocs ? `<button type="button" class="btn btn-sm btn-outline ml-sidebar-extra-btn" data-target-id="unit-docs">📂 Tài liệu &amp; Handout</button>` : ""}
+            ${hasExtra ? `<button type="button" class="btn btn-sm btn-outline ml-sidebar-extra-btn" data-target-id="unit-extra" title="Bài tập tổng hợp nâng cao">🏆 Bài tập tổng hợp nâng cao</button>` : ""}
+            ${hasSummary ? `<button type="button" class="btn btn-sm btn-outline ml-sidebar-extra-btn" data-target-id="unit-key-summary" title="Tổng hợp công thức cuối chương">📌 Tổng hợp công thức cuối chương</button>` : ""}
+            ${hasDocs ? `<button type="button" class="btn btn-sm btn-outline ml-sidebar-extra-btn" data-target-id="unit-docs" title="Tài liệu & Handout">📂 Tài liệu &amp; Handout</button>` : ""}
           </div>
         `;
 
         jumpBar.querySelectorAll("[data-target-id]").forEach((btn) => {
+          const previewTitle =
+            btn.getAttribute("title") || btn.textContent.trim();
+          const showPreview = () => {
+            const lbl = document.getElementById("ml-sidebar-current-label");
+            if (lbl) lbl.textContent = `👁️ ${previewTitle}`;
+          };
+          const restoreActive = () => {
+            const lbl = document.getElementById("ml-sidebar-current-label");
+            if (lbl && lbl.dataset.activeTitle) {
+              lbl.textContent = `📍 ${lbl.dataset.activeTitle}`;
+            }
+          };
+
+          btn.addEventListener("pointerenter", showPreview);
+          btn.addEventListener("focus", showPreview);
+          btn.addEventListener("pointerleave", restoreActive);
+          btn.addEventListener("blur", restoreActive);
+
           btn.addEventListener("click", (e) => {
             e.preventDefault();
             const targetId = btn.getAttribute("data-target-id");
+            setActiveSpySection(targetId);
             const target = document.getElementById(targetId);
             if (target && wrapper) {
-              // Đo toạ độ tương đối giữa target và wrapper để cuộn nội bộ mượt mà
               const wrapRect = wrapper.getBoundingClientRect();
               const targetRect = target.getBoundingClientRect();
               const targetScrollTop =
@@ -1687,19 +1965,40 @@
         const isDone = !!completedMap[pill.getAttribute("data-sec-key")];
         if (isDone) done++;
         pill.classList.toggle("is-done", isDone);
+
+        const targetId = pill.getAttribute("data-target-id");
+        const secBtn = targetId
+          ? document.querySelector(`#${targetId} .section-complete-btn`)
+          : null;
+        if (secBtn) {
+          secBtn.classList.toggle("done", isDone);
+          secBtn.innerHTML = isDone
+            ? "✓ Đã hoàn thành phần này"
+            : "○ Đánh dấu đã học xong phần này (+5 XP)";
+        }
       });
       const badge = document.getElementById("ml-sidebar-progress-badge");
       if (badge) badge.textContent = `${done}/${pills.length} xong`;
+      const fill = document.getElementById("ml-sidebar-progress-fill");
+      if (fill) {
+        const pct = Math.round((done / pills.length) * 100);
+        fill.style.width = `${pct}%`;
+      }
     }
 
     let activeSpyObserver = null;
     let spyBlocks = [];
+    let lastActiveSpyId = "";
 
     function setActiveSpySection(activeId) {
-      if (!activeId) return;
-      spyBlocks.forEach((blk) => {
-        blk.classList.toggle("ml-zen-focused", blk.id === activeId);
-      });
+      if (!activeId || lastActiveSpyId === activeId) return;
+      lastActiveSpyId = activeId;
+
+      if (studyModal.classList.contains("ml-zen-mode")) {
+        spyBlocks.forEach((blk) => {
+          blk.classList.toggle("ml-zen-focused", blk.id === activeId);
+        });
+      }
       modalBody
         .querySelectorAll(".section-jump-bar [data-target-id]")
         .forEach((btn) => {
@@ -1708,6 +2007,22 @@
             btn.getAttribute("data-target-id") === activeId,
           );
         });
+
+      const currentLabel = document.getElementById("ml-sidebar-current-label");
+      if (currentLabel) {
+        const activeBlk = spyBlocks.find((b) => b.id === activeId);
+        const activeBtn = modalBody.querySelector(
+          `.section-jump-bar [data-target-id="${activeId}"]`,
+        );
+        const titleText =
+          activeBlk?.querySelector(".unit-header")?.textContent.trim() ||
+          activeBtn?.getAttribute("title") ||
+          activeBtn?.textContent.trim() ||
+          "Nội dung bài học";
+        currentLabel.dataset.activeTitle = titleText;
+        currentLabel.textContent = `📍 ${titleText}`;
+        currentLabel.title = titleText;
+      }
     }
 
     function updateScrollSpy() {
@@ -1715,6 +2030,7 @@
         activeSpyObserver.disconnect();
         activeSpyObserver = null;
       }
+      lastActiveSpyId = "";
       spyBlocks = Array.from(
         modalBody.querySelectorAll(
           ".unit-block[id], .chapter-summary-box[id], .doc-section[id]",
@@ -1763,9 +2079,13 @@
     );
 
     modalBody.addEventListener("click", (e) => {
-      if (e.target.closest(".section-complete-btn")) {
+      if (
+        e.target.closest(".section-complete-btn") ||
+        e.target.closest('[onclick*="markExerciseSolved"]')
+      ) {
         setTimeout(syncSidebarDoneStates, 20);
       }
+      if (!studyModal.classList.contains("ml-zen-mode")) return;
       const blk = e.target.closest(
         ".unit-block[id], .chapter-summary-box[id], .doc-section[id]",
       );
@@ -1786,6 +2106,8 @@
         isBuildingLayout = true;
         bodyObs.disconnect(); // Ngắt tạm thời để KaTeX và DOM không kích hoạt lại observer
         try {
+          wrapper.scrollTop = 0;
+          if (readBar) readBar.style.width = "0%";
           buildSideNavigatorLayout();
           updateScrollSpy();
         } finally {
@@ -2033,6 +2355,413 @@
     }
   }
 
+  /* =========================================================
+     D3. LIVE MATH MONITOR NGAY TRONG THẺ HERO (.hero-math-card)
+     ========================================================= */
+  function initHeroLiveMonitor() {
+    const heroCard = document.querySelector(".hero-math-card");
+    if (!heroCard || document.getElementById("ml-hero-live-monitor")) return;
+
+    const btnRow = heroCard.querySelector("div:last-child");
+    if (!btnRow) return;
+
+    const monitor = document.createElement("div");
+    monitor.id = "ml-hero-live-monitor";
+    monitor.style.cssText =
+      "background:rgba(7,12,24,0.92); border:1px solid rgba(56,189,248,0.32); border-radius:14px; padding:10px 12px 12px; margin-bottom:14px; box-shadow:inset 0 2px 14px rgba(0,0,0,0.65);";
+
+    monitor.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
+        <div style="display:flex; gap:5px; flex-wrap:wrap;" id="ml-hero-mon-tabs">
+          <button type="button" data-mon-mode="taylor" style="padding:3px 9px; border-radius:7px; border:1px solid #38bdf8; background:rgba(14,165,233,0.22); color:#e0f2fe; font-family:var(--font-mono); font-size:0.72rem; font-weight:700; cursor:pointer;">📈 Taylor Pₙ(x)</button>
+          <button type="button" data-mon-mode="eigen" style="padding:3px 9px; border-radius:7px; border:1px solid rgba(148,163,184,0.25); background:rgba(30,41,59,0.55); color:#94a3b8; font-family:var(--font-mono); font-size:0.72rem; font-weight:700; cursor:pointer;">🔷 Vector riêng</button>
+          <button type="button" data-mon-mode="riemann" style="padding:3px 9px; border-radius:7px; border:1px solid rgba(148,163,184,0.25); background:rgba(30,41,59,0.55); color:#94a3b8; font-family:var(--font-mono); font-size:0.72rem; font-weight:700; cursor:pointer;">∫ Riemann</button>
+        </div>
+        <span id="ml-hero-mon-hint" style="font-family:var(--font-mono); font-size:0.68rem; color:#64748b;">Rê chuột để tua</span>
+      </div>
+      <div style="position:relative; border-radius:10px; overflow:hidden; border:1px solid rgba(51,65,85,0.7); background:#060a14;">
+        <canvas id="ml-hero-mon-canvas" style="display:block; width:100%; height:158px; cursor:crosshair;"></canvas>
+        <div id="ml-hero-mon-readout" style="position:absolute; top:7px; left:9px; padding:2px 8px; border-radius:6px; background:rgba(15,23,42,0.82); border:1px solid rgba(56,189,248,0.28); color:#7dd3fc; font-family:var(--font-mono); font-size:0.7rem; font-weight:700; pointer-events:none;">n = 5 • sin(x)</div>
+      </div>
+    `;
+
+    heroCard.insertBefore(monitor, btnRow);
+
+    const canvas = document.getElementById("ml-hero-mon-canvas");
+    const readout = document.getElementById("ml-hero-mon-readout");
+    const tabs = Array.from(
+      monitor.querySelectorAll("#ml-hero-mon-tabs button"),
+    );
+    const ctx = canvas.getContext("2d");
+
+    let mode = "taylor";
+    let w = 0;
+    let h = 158;
+    let isVisible = true;
+    const hover = { active: false, nx: 0.5, ny: 0.5 };
+
+    const FACT = [
+      1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880, 3628800, 39916800,
+    ];
+
+    function resizeMon() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      w = Math.max(240, canvas.clientWidth || 360);
+      h = 158;
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resizeMon();
+    window.addEventListener("resize", resizeMon, { passive: true });
+
+    tabs.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        mode = btn.dataset.monMode;
+        window.MathLabSound?.soft?.();
+        tabs.forEach((b) => {
+          const on = b === btn;
+          b.style.borderColor = on ? "#38bdf8" : "rgba(148,163,184,0.25)";
+          b.style.background = on
+            ? "rgba(14,165,233,0.22)"
+            : "rgba(30,41,59,0.55)";
+          b.style.color = on ? "#e0f2fe" : "#94a3b8";
+        });
+      });
+    });
+
+    canvas.addEventListener(
+      "pointermove",
+      (e) => {
+        const rect = canvas.getBoundingClientRect();
+        hover.active = true;
+        hover.nx = Math.min(
+          1,
+          Math.max(0, (e.clientX - rect.left) / rect.width),
+        );
+        hover.ny = Math.min(
+          1,
+          Math.max(0, (e.clientY - rect.top) / rect.height),
+        );
+      },
+      { passive: true },
+    );
+
+    canvas.addEventListener(
+      "pointerleave",
+      () => {
+        hover.active = false;
+      },
+      { passive: true },
+    );
+
+    if ("IntersectionObserver" in window) {
+      const visObs = new IntersectionObserver(
+        (entries) => {
+          isVisible = entries[0]?.isIntersecting ?? true;
+        },
+        { threshold: 0.05 },
+      );
+      visObs.observe(monitor);
+    }
+
+    function evalTaylorSin(x, degFloat) {
+      const m = Math.floor(degFloat);
+      const frac = degFloat - m;
+      let sum = 0;
+      let xPow = x;
+      const x2 = x * x;
+      for (let k = 0; k <= m; k++) {
+        sum += ((k % 2 === 0 ? 1 : -1) * xPow) / FACT[2 * k + 1];
+        xPow *= x2;
+      }
+      if (frac > 0.001 && m < 5) {
+        const nk = m + 1;
+        sum += (frac * (nk % 2 === 0 ? 1 : -1) * xPow) / FACT[2 * nk + 1];
+      }
+      return sum;
+    }
+
+    function drawGrid() {
+      ctx.strokeStyle = "rgba(51, 65, 85, 0.35)";
+      ctx.lineWidth = 1;
+      const step = 26;
+      for (let gx = (w * 0.5) % step; gx < w; gx += step) {
+        ctx.beginPath();
+        ctx.moveTo(gx, 0);
+        ctx.lineTo(gx, h);
+        ctx.stroke();
+      }
+      for (let gy = (h * 0.5) % step; gy < h; gy += step) {
+        ctx.beginPath();
+        ctx.moveTo(0, gy);
+        ctx.lineTo(w, gy);
+        ctx.stroke();
+      }
+    }
+
+    function renderTaylor(t) {
+      drawGrid();
+      const cx = w * 0.5;
+      const cy = h * 0.56;
+      const sx = w / 8.4;
+      const sy = 44;
+
+      // Trục tọa độ
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.35)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, cy);
+      ctx.lineTo(w, cy);
+      ctx.moveTo(cx, 0);
+      ctx.lineTo(cx, h);
+      ctx.stroke();
+
+      const wave = (Math.sin(t * 0.85 - Math.PI / 2) + 1) * 0.5;
+      const degFloat = wave * 5;
+      const degN = 2 * Math.round(degFloat) + 1;
+
+      // Tô vùng sai số giữa sin(x) và P_n(x)
+      ctx.fillStyle = "rgba(56, 189, 248, 0.12)";
+      ctx.beginPath();
+      for (let px = 0; px <= w; px += 4) {
+        const x = (px - cx) / sx;
+        const ySin = cy - Math.sin(x) * sy;
+        if (px === 0) ctx.moveTo(px, ySin);
+        else ctx.lineTo(px, ySin);
+      }
+      for (let px = w; px >= 0; px -= 4) {
+        const x = (px - cx) / sx;
+        const yTay = Math.max(
+          -20,
+          Math.min(h + 20, cy - evalTaylorSin(x, degFloat) * sy),
+        );
+        ctx.lineTo(px, yTay);
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      // Đường gốc y = sin(x)
+      ctx.strokeStyle = "#818cf8";
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      for (let px = 0; px <= w; px += 4) {
+        const x = (px - cx) / sx;
+        const py = cy - Math.sin(x) * sy;
+        if (px === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Đường đa thức Taylor P_n(x)
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      let started = false;
+      for (let px = 0; px <= w; px += 3) {
+        const x = (px - cx) / sx;
+        const py = cy - evalTaylorSin(x, degFloat) * sy;
+        if (py < -25 || py > h + 25) {
+          started = false;
+          continue;
+        }
+        if (!started) {
+          ctx.moveTo(px, py);
+          started = true;
+        } else {
+          ctx.lineTo(px, py);
+        }
+      }
+      ctx.stroke();
+
+      // Điểm dò tương tác theo chuột hoặc tự động
+      const probeX = hover.active
+        ? (hover.nx - 0.5) * 7.6
+        : Math.sin(t * 0.9) * 2.5;
+      const valTay = evalTaylorSin(probeX, degFloat);
+      const ppx = cx + probeX * sx;
+      const ppy = Math.max(8, Math.min(h - 8, cy - valTay * sy));
+
+      ctx.strokeStyle = "rgba(250, 204, 21, 0.55)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(ppx, cy);
+      ctx.lineTo(ppx, ppy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = "#facc15";
+      ctx.beginPath();
+      ctx.arc(ppx, ppy, 4.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      readout.textContent = `P${degN}(x) • x=${probeX.toFixed(2)} • y=${valTay.toFixed(3)}`;
+    }
+
+    function renderEigen(t) {
+      const cx = w * 0.52;
+      const cy = h * 0.54;
+      const unit = 42;
+      const theta = Math.PI / 6;
+      const cosT = Math.cos(theta);
+      const sinT = Math.sin(theta);
+
+      const l1 = hover.active
+        ? 0.65 + hover.nx * 1.15
+        : 1.38 + 0.32 * Math.sin(t * 1.1);
+      const l2 = hover.active
+        ? 0.55 + (1 - hover.ny) * 0.95
+        : 0.72 + 0.24 * Math.cos(t * 1.1);
+
+      const a11 = l1 * cosT * cosT + l2 * sinT * sinT;
+      const a12 = (l1 - l2) * cosT * sinT;
+      const a21 = a12;
+      const a22 = l1 * sinT * sinT + l2 * cosT * cosT;
+
+      const map = (gx, gy) => [
+        cx + (a11 * gx + a12 * gy) * unit,
+        cy - (a21 * gx + a22 * gy) * unit,
+      ];
+
+      // Lưới biến đổi tuyến tính
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.2)";
+      ctx.lineWidth = 1;
+      for (let i = -4; i <= 4; i++) {
+        const [x1, y1] = map(i, -4);
+        const [x2, y2] = map(i, 4);
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        const [x3, y3] = map(-4, i);
+        const [x4, y4] = map(4, i);
+        ctx.beginPath();
+        ctx.moveTo(x3, y3);
+        ctx.lineTo(x4, y4);
+        ctx.stroke();
+      }
+
+      // Đường tròn đơn vị -> Elip riêng
+      ctx.strokeStyle = "rgba(129, 140, 248, 0.75)";
+      ctx.fillStyle = "rgba(129, 140, 248, 0.12)";
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      for (let k = 0; k <= 48; k++) {
+        const ang = (k / 48) * Math.PI * 2;
+        const [ex, ey] = map(Math.cos(ang), Math.sin(ang));
+        if (k === 0) ctx.moveTo(ex, ey);
+        else ctx.lineTo(ex, ey);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 2 phương Vector riêng (Eigenvectors) bất biến
+      ctx.strokeStyle = "rgba(16, 185, 129, 0.65)";
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([5, 4]);
+      [
+        [cosT, sinT],
+        [-sinT, cosT],
+      ].forEach(([vx, vy]) => {
+        const [sx, sy] = map(-vx * 3.5, -vy * 3.5);
+        const [ex, ey] = map(vx * 3.5, vy * 3.5);
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+      });
+      ctx.setLineDash([]);
+
+      // Cặp vector riêng chính
+      const drawVec = (gx, gy, color) => {
+        const [ex, ey] = map(gx, gy);
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(ex, ey, 3.8, 0, Math.PI * 2);
+        ctx.fill();
+      };
+      drawVec(cosT, sinT, "#10b981");
+      drawVec(-sinT, cosT, "#38bdf8");
+
+      const detA = l1 * l2;
+      readout.textContent = `det(A)=${detA.toFixed(2)} • λ₁=${l1.toFixed(2)}, λ₂=${l2.toFixed(2)}`;
+    }
+
+    function renderRiemann(t) {
+      drawGrid();
+      const padL = 28;
+      const padR = 18;
+      const baseY = h - 22;
+      const plotW = w - padL - padR;
+      const plotH = h - 46;
+      const f = (x) => 0.22 * x * x + 0.55; // Tích phân trên [0, 3] = 3.63
+      const maxY = 2.7;
+
+      const nRects = hover.active
+        ? Math.max(3, Math.min(28, Math.round(3 + hover.nx * 25)))
+        : Math.round(4 + (Math.sin(t * 0.9 - Math.PI / 2) + 1) * 0.5 * 20);
+
+      const dx = 3 / nRects;
+      let riemannSum = 0;
+
+      for (let i = 0; i < nRects; i++) {
+        const xm = (i + 0.5) * dx;
+        const ym = f(xm);
+        riemannSum += ym * dx;
+
+        const rx = padL + (i / nRects) * plotW;
+        const rw = plotW / nRects;
+        const rh = (ym / maxY) * plotH;
+        const ry = baseY - rh;
+
+        ctx.fillStyle = "rgba(16, 185, 129, 0.24)";
+        ctx.strokeStyle = "rgba(52, 211, 153, 0.75)";
+        ctx.lineWidth = 1;
+        ctx.fillRect(rx, ry, Math.max(1, rw - 1), rh);
+        ctx.strokeRect(rx, ry, Math.max(1, rw - 1), rh);
+      }
+
+      // Đường cong f(x)
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      for (let i = 0; i <= 60; i++) {
+        const x = (i / 60) * 3;
+        const px = padL + (i / 60) * plotW;
+        const py = baseY - (f(x) / maxY) * plotH;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+
+      readout.textContent = `N=${nRects} • ∑=${riemannSum.toFixed(3)} / ∫=3.630`;
+    }
+
+    function loop(now = 0) {
+      requestAnimationFrame(loop);
+      if (document.hidden || !isVisible || w === 0) return;
+
+      const t = now * 0.001;
+      ctx.clearRect(0, 0, w, h);
+      if (mode === "taylor") renderTaylor(t);
+      else if (mode === "eigen") renderEigen(t);
+      else renderRiemann(t);
+    }
+
+    loop();
+  }
+
   function initMathLabUpgrades() {
     enhanceForumComposer();
     injectProgressBarsOnCards();
@@ -2042,6 +2771,8 @@
     initScrollChoreography();
     init3DBorderGlow();
     initHeroMathCanvas();
+    initHeroLiveMonitor();
+    initFloatingChapterDock();
     initCommandPalette();
     initStudyScrollSpyAndZen();
     initMicroSoundSystem();
