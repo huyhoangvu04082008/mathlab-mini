@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chuyên đề, Phòng Lab &amp; Phòng Thi — MathLab Mini</title>
+    <title>Chuyên đề, Phòng Lab &amp; Phòng Thi | MathLab Mini</title>
 
     <!-- Favicon SVG HCMUE x MathLab -->
     <link
@@ -152,8 +152,21 @@
             class="icon-btn"
             id="theme-toggle-btn"
             title="Đổi giao diện Sáng / Tối"
+            aria-label="Đổi giao diện Sáng / Tối"
           >
-            🌙
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.9"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
           </button>
           <a href="auth.html" class="btn btn-sm btn-primary" id="nav-auth-btn"
             >Đăng nhập</a
@@ -163,7 +176,21 @@
             id="hamburger-btn"
             aria-label="Mở menu"
           >
-            ☰
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
           </button>
         </div>
       </div>
@@ -176,7 +203,8 @@
           <h2>Danh mục 7 Chuyên đề Toán Cao Cấp</h2>
           <p>
             Đầy đủ 7 chương chuẩn slide bài giảng Giải tích 1 &amp; Cơ sở Toán
-            CNTT, tích hợp Phòng Thi Bấm Giờ và AI Chấm Tự Luận qua ảnh chụp.
+            CNTT, tích hợp Phòng Thi Bấm Giờ và trợ lý Pike Man kiểm tra bài
+            giải tự luận.
           </p>
         </div>
 
@@ -190,7 +218,7 @@
               type="text"
               id="search-topic"
               class="input-control"
-              placeholder="🔍 Tìm tên chương, từ khóa (VD: Taylor, Chuỗi, Gauss, Euclide)..."
+              placeholder="Tìm tên chương, từ khóa (VD: Taylor, Chuỗi, Gauss, Euclide)..."
               oninput="renderTopicsGrid()"
               style="min-width: 240px"
             />
@@ -200,9 +228,9 @@
               onchange="renderTopicsGrid()"
             >
               <option value="all">Tất cả học phần</option>
-              <option value="Giải tích 1">Giải tích 1 (Chương 1–4)</option>
+              <option value="Giải tích 1">Giải tích 1 (Chương 1-4)</option>
               <option value="Đại số tuyến tính">
-                Đại số tuyến tính (Chương 5–7)
+                Đại số tuyến tính (Chương 5-7)
               </option>
             </select>
             <select
@@ -232,14 +260,14 @@
               class="btn btn-sm btn-secondary"
               onclick="openExamHubModal('midterm-1')"
             >
-              ⏱️ Phòng Thi &amp; AI Chấm Ảnh
+              Phòng Thi &amp; Chấm Bài
             </button>
             <button
               type="button"
               class="btn btn-sm btn-primary"
               onclick="openTopicFormModal()"
             >
-              ➕ Thêm chuyên đề
+              + Thêm chuyên đề
             </button>
             <button
               type="button"
@@ -247,7 +275,7 @@
               onclick="resetDefaultTopics()"
               title="Khôi phục dữ liệu mặc định"
             >
-              ↺ Khôi phục gốc
+              Khôi phục gốc
             </button>
           </div>
         </div>
@@ -286,12 +314,10 @@
             <span class="badge badge-calc" style="margin-bottom: 8px"
               >INTERACTIVE SANDBOX</span
             >
-            <h2 style="font-size: 1.65rem">
-              🧪 Phòng Thí Nghiệm Toán Trực Quan
-            </h2>
+            <h2 style="font-size: 1.65rem">Phòng Thí Nghiệm Toán Trực Quan</h2>
             <p style="color: var(--text-secondary); font-size: 0.95rem">
               Thực hành khảo sát hàm số, tiếp tuyến, tích phân, khai triển
-              Taylor–Maclaurin và giải bài toán Ma trận – Hệ PTTT ngay lập tức.
+              Taylor - Maclaurin và giải bài toán Ma trận - Hệ PTTT ngay lập tức.
             </p>
           </div>
 
@@ -300,13 +326,13 @@
               class="lab-tab active"
               onclick="switchLabTab('lab-calc', this)"
             >
-              📈 1. Đồ thị, Tiếp tuyến, Tích phân &amp; Taylor
+              1. Đồ thị, Tiếp tuyến, Tích phân &amp; Taylor
             </button>
             <button class="lab-tab" onclick="switchLabTab('lab-matrix', this)">
-              🔢 2. Phân tích Ma trận (det, rank, REF, A⁻¹)
+              2. Phân tích Ma trận (det, rank, REF, A⁻¹)
             </button>
             <button class="lab-tab" onclick="switchLabTab('lab-system', this)">
-              ⚖️ 3. Giải Hệ phương trình AX = b
+              3. Giải Hệ phương trình AX = b
             </button>
           </div>
 
@@ -512,7 +538,7 @@
                   style="width: 100%; margin-bottom: 14px"
                   onclick="runCalculusLab()"
                 >
-                  ▶ Vẽ đồ thị &amp; Tính toán
+                  Vẽ đồ thị &amp; Tính toán
                 </button>
 
                 <div
@@ -592,7 +618,7 @@
                       class="btn btn-sm btn-primary"
                       onclick="switchCalcViewMode('canvas')"
                     >
-                      📐 Canvas Tương Tác
+                      Canvas Tương Tác
                     </button>
                     <button
                       type="button"
@@ -600,7 +626,7 @@
                       class="btn btn-sm btn-outline"
                       onclick="switchCalcViewMode('geogebra')"
                     >
-                      🌐 GeoGebra Nhúng
+                      GeoGebra Nhúng
                     </button>
                   </div>
 
@@ -617,17 +643,19 @@
                       type="button"
                       class="btn btn-sm btn-outline"
                       title="Phóng to (Zoom In)"
+                      aria-label="Phóng to"
                       onclick="zoomCalculusLab(1.25)"
                     >
-                      ➕
+                      +
                     </button>
                     <button
                       type="button"
                       class="btn btn-sm btn-outline"
                       title="Thu nhỏ (Zoom Out)"
+                      aria-label="Thu nhỏ"
                       onclick="zoomCalculusLab(0.8)"
                     >
-                      ➖
+                      −
                     </button>
                     <button
                       type="button"
@@ -635,7 +663,7 @@
                       title="Đặt lại góc nhìn về gốc O"
                       onclick="resetCalculusViewport()"
                     >
-                      🎯 Về gốc O
+                      Về gốc O
                     </button>
                     <button
                       type="button"
@@ -643,7 +671,7 @@
                       title="Tải ảnh đồ thị PNG"
                       onclick="exportCalculusPNG()"
                     >
-                      📸 PNG
+                      Xuất PNG
                     </button>
                     <a
                       href="https://www.geogebra.org/calculator"
@@ -653,7 +681,7 @@
                       title="Mở toàn màn hình trên GeoGebra.org"
                       style="text-decoration: none"
                     >
-                      ↗ GeoGebra.org
+                      GeoGebra.org ↗
                     </a>
                   </div>
                 </div>
@@ -682,7 +710,7 @@
                     "
                   >
                     <span
-                      >🖱️ Lăn chuột: Zoom tại điểm trỏ • Kéo nền: Di chuyển trục
+                      >Lăn chuột: Zoom tại điểm trỏ • Kéo nền: Di chuyển trục
                       • Kéo chấm xanh: Trượt tiếp điểm x₀</span
                     >
                     <span
@@ -764,7 +792,7 @@
                   style="width: 100%"
                   onclick="analyzeMatrix()"
                 >
-                  ⚡ Tính det(A), rank(A), REF, Aᵀ &amp; A⁻¹
+                  Tính det(A), rank(A), REF, Aᵀ &amp; A⁻¹
                 </button>
               </div>
               <div class="output-console" id="matrix-output"></div>
@@ -821,7 +849,7 @@
                   style="width: 100%"
                   onclick="solveLinearSystem()"
                 >
-                  🔍 Khử Gauss &amp; Biện luận nghiệm
+                  Khử Gauss &amp; Biện luận nghiệm
                 </button>
               </div>
               <div class="output-console" id="sys-output"></div>
@@ -880,7 +908,7 @@
               data-study-tab="lesson"
               onclick="switchStudyTab('lesson')"
             >
-              📖 Lý thuyết, Ví dụ &amp; Bài tập
+              Lý thuyết, Ví dụ &amp; Bài tập
             </button>
             <button
               type="button"
@@ -888,7 +916,7 @@
               data-study-tab="quiz"
               onclick="switchStudyTab('quiz')"
             >
-              🎯 Quiz Thích ứng &amp; XP
+              Quiz Thích ứng &amp; XP
             </button>
             <button
               type="button"
@@ -896,7 +924,7 @@
               data-study-tab="exam"
               onclick="switchStudyTab('exam')"
             >
-              ⏱️ Phòng Thi &amp; AI Chấm Ảnh
+              Phòng Thi &amp; Chấm Bài
             </button>
             <button
               type="button"
@@ -905,15 +933,29 @@
               onclick="toggleStudyWideMode()"
               title="Chuyển đổi độ rộng khung đọc"
             >
-              🖥️ Mở rộng tối đa
+              Mở rộng tối đa
             </button>
             <button
               type="button"
               class="icon-btn"
               onclick="closeModal('study-modal')"
               title="Đóng cửa sổ (Esc)"
+              aria-label="Đóng cửa sổ"
             >
-              ✕
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
             </button>
           </div>
         </div>
@@ -926,14 +968,14 @@
             class="btn btn-sm btn-outline"
             onclick="scrollStudyModalTop()"
           >
-            ⬆️ Lên đầu bài học
+            Lên đầu bài học
           </button>
           <button
             type="button"
             class="btn btn-primary"
             onclick="closeModal('study-modal')"
           >
-            ✕ Đóng phòng học
+            Đóng phòng học
           </button>
         </div>
       </div>
@@ -944,8 +986,26 @@
       <div class="modal-box" style="max-width: 580px">
         <div class="modal-header">
           <h3 id="topic-form-title">Thêm Chuyên đề Toán Mới</h3>
-          <button class="icon-btn" onclick="closeModal('topic-form-modal')">
-            ✕
+          <button
+            type="button"
+            class="icon-btn"
+            onclick="closeModal('topic-form-modal')"
+            aria-label="Đóng biểu mẫu"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
           </button>
         </div>
         <form id="topic-crud-form" onsubmit="handleSaveTopic(event)">
@@ -1022,9 +1082,7 @@
             >
               Hủy
             </button>
-            <button type="submit" class="btn btn-primary">
-              💾 Lưu chuyên đề
-            </button>
+            <button type="submit" class="btn btn-primary">Lưu chuyên đề</button>
           </div>
         </form>
       </div>
@@ -1082,9 +1140,9 @@
           <div>
             <h4>Học phần</h4>
             <ul>
-              <li><a href="products.html">Giải tích 1 (Chương 1–4)</a></li>
+              <li><a href="products.html">Giải tích 1 (Chương 1-4)</a></li>
               <li>
-                <a href="products.html">Đại số tuyến tính (Chương 5–7)</a>
+                <a href="products.html">Đại số tuyến tính (Chương 5-7)</a>
               </li>
               <li>
                 <a href="products.html#math-lab">Đồ thị &amp; Tích phân số</a>
@@ -1093,7 +1151,7 @@
                 <a
                   href="javascript:void(0)"
                   onclick="openExamHubModal('midterm-1')"
-                  >Phòng Thi Bấm Giờ &amp; AI Chấm Ảnh</a
+                  >Phòng Thi Bấm Giờ &amp; Chấm Bài</a
                 >
               </li>
             </ul>
@@ -1101,15 +1159,15 @@
           <div>
             <h4>Nhóm thực hiện</h4>
             <ul>
-              <li><strong>Vũ Huy Hoàng</strong> — MSSV: 52.01.104.124</li>
-              <li><strong>Hồ Đắc Anh Khoa</strong> — MSSV: 52.01.104.042</li>
-              <li>Học phần: Thiết kế Web (CNTT — HCMUE)</li>
+              <li><strong>Vũ Huy Hoàng</strong> - MSSV: 52.01.104.124</li>
+              <li><strong>Hồ Đắc Anh Khoa</strong> - MSSV: 52.01.104.042</li>
+              <li>Học phần: Thiết kế Web (CNTT • HCMUE)</li>
             </ul>
           </div>
         </div>
         <div class="footer-bottom">
           <span
-            >© 2026 MathLab Mini — Thực hiện bởi Vũ Huy Hoàng (52.01.104.124)
+            >© 2026 MathLab Mini. Thực hiện bởi Vũ Huy Hoàng (52.01.104.124)
             &amp; Hồ Đắc Anh Khoa (52.01.104.042).</span
           >
           <span>Khoa CNTT • Trường ĐH Sư phạm TP.HCM</span>

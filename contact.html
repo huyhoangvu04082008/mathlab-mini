@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Liên hệ &amp; Hỏi đáp — MathLab Mini</title>
+    <title>Liên hệ &amp; Hỏi đáp | MathLab Mini</title>
 
     <link
       rel="icon"
@@ -84,7 +84,7 @@
         margin-bottom: 10px;
       }
       .contact-chip {
-        padding: 5px 11px;
+        padding: 5px 12px;
         border-radius: 999px;
         font-family: inherit;
         font-size: 0.78rem;
@@ -108,10 +108,9 @@
         color: var(--primary);
       }
       .contact-chip.active {
-        background: linear-gradient(135deg, #0ea5e9, #2563eb);
-        border-color: rgba(125, 211, 252, 0.6);
+        background: var(--primary);
+        border-color: var(--primary);
         color: #ffffff;
-        box-shadow: 0 4px 12px -2px rgba(37, 99, 235, 0.4);
       }
       .contact-recessed-note {
         display: flex;
@@ -292,8 +291,21 @@
             class="icon-btn"
             id="theme-toggle-btn"
             title="Đổi giao diện Sáng / Tối"
+            aria-label="Đổi giao diện Sáng / Tối"
           >
-            🌙
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.9"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
           </button>
           <a href="auth.html" class="btn btn-sm btn-primary" id="nav-auth-btn"
             >Đăng nhập</a
@@ -303,7 +315,21 @@
             id="hamburger-btn"
             aria-label="Mở menu"
           >
-            ☰
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
           </button>
         </div>
       </div>
@@ -316,7 +342,7 @@
           <h2>Góp ý Học liệu &amp; Câu hỏi Thường gặp</h2>
           <p>
             Gửi đề xuất bổ sung bài tập hoặc xem nhanh hướng dẫn sử dụng các
-            công cụ tính toán, Phòng Lab và Pike Man AI trên MathLab Mini.
+            công cụ tính toán, Phòng Lab và trợ lý Pike Man trên MathLab Mini.
           </p>
         </div>
 
@@ -345,9 +371,7 @@
             <span class="badge badge-calc" style="margin-bottom: 12px"
               >GÓP Ý HỌC LIỆU</span
             >
-            <h3 style="margin-bottom: 6px">
-              ✉️ Gửi phản hồi / Đề xuất bài tập
-            </h3>
+            <h3 style="margin-bottom: 6px">Gửi phản hồi / Đề xuất bài tập</h3>
             <p
               style="
                 color: var(--text-secondary);
@@ -394,28 +418,28 @@
                     class="contact-chip active"
                     data-topic-val="Góp ý học liệu"
                   >
-                    📚 Đề xuất bài tập
+                    Đề xuất bài tập
                   </button>
                   <button
                     type="button"
                     class="contact-chip"
                     data-topic-val="Báo lỗi công thức"
                   >
-                    📐 Báo lỗi LaTeX
+                    Báo lỗi LaTeX
                   </button>
                   <button
                     type="button"
                     class="contact-chip"
                     data-topic-val="Hỗ trợ Phòng Lab"
                   >
-                    🧪 Phòng Lab
+                    Phòng Lab
                   </button>
                   <button
                     type="button"
                     class="contact-chip"
                     data-topic-val="Khác"
                   >
-                    💬 Khác
+                    Khác
                   </button>
                 </div>
                 <select id="contact-topic" class="select-control">
@@ -446,14 +470,14 @@
               </div>
 
               <div class="contact-recessed-note">
-                <span>💾 Tự động lưu cục bộ trong trình duyệt</span>
+                <span>Tự động lưu cục bộ trong trình duyệt</span>
                 <span class="contact-saved-badge" id="contact-saved-count"
                   >0 góp ý đã lưu</span
                 >
               </div>
 
               <button type="submit" class="btn btn-primary" style="width: 100%">
-                🚀 Gửi phản hồi
+                Gửi phản hồi
               </button>
             </form>
           </div>
@@ -463,14 +487,14 @@
             <span class="badge badge-linalg" style="margin-bottom: 12px"
               >HỎI ĐÁP NHANH (FAQ)</span
             >
-            <h3 style="margin-bottom: 12px">❓ Câu hỏi thường gặp</h3>
+            <h3 style="margin-bottom: 12px">Câu hỏi thường gặp</h3>
 
             <div class="form-group" style="margin-bottom: 16px">
               <input
                 type="text"
                 id="faq-search-input"
                 class="input-control"
-                placeholder="🔍 Tìm câu hỏi (VD: localStorage, LaTeX, det(A), API Key)..."
+                placeholder="Tìm câu hỏi (VD: localStorage, LaTeX, det(A), Cấu hình)..."
               />
             </div>
 
@@ -488,7 +512,20 @@
                       đâu?</span
                     >
                   </span>
-                  <span>▼</span>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                    style="flex-shrink: 0"
+                  >
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
                 </button>
                 <div class="contact-faq-answer">
                   Toàn bộ chuyên đề mới, nội dung chỉnh sửa, điểm trắc nghiệm
@@ -512,7 +549,20 @@
                       tích?</span
                     >
                   </span>
-                  <span>▼</span>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                    style="flex-shrink: 0"
+                  >
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
                 </button>
                 <div class="contact-faq-answer">
                   Bạn có thể nhập cả cú pháp chuẩn (như <code>x^3 - 3*x</code>,
@@ -538,7 +588,20 @@
                       A⁻¹?</span
                     >
                   </span>
-                  <span>▼</span>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                    style="flex-shrink: 0"
+                  >
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
                 </button>
                 <div class="contact-faq-answer">
                   Theo định lý Chương 5 (Đại số tuyến tính), ma trận vuông $A$
@@ -561,7 +624,20 @@
                       nào?</span
                     >
                   </span>
-                  <span>▼</span>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                    style="flex-shrink: 0"
+                  >
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
                 </button>
                 <div class="contact-faq-answer">
                   Nội dung được biên soạn bám sát đề cương học phần
@@ -583,18 +659,31 @@
                   <span class="contact-faq-qwrap">
                     <span class="contact-faq-num">05</span>
                     <span
-                      >Làm sao dùng Trợ lý Pike Man AI &amp; chấm ảnh tự luận
-                      viết tay?</span
+                      >Làm sao dùng Trợ lý Pike Man và kiểm tra bài giải viết
+                      tay?</span
                     >
                   </span>
-                  <span>▼</span>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                    style="flex-shrink: 0"
+                  >
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
                 </button>
                 <div class="contact-faq-answer">
-                  Bạn bấm nút <strong>🤖 Pike Man</strong> ở góc dưới bên phải,
-                  qua tab <strong>⚙️ API Key</strong> và dán Gemini API Key miễn
-                  phí từ Google AI Studio (<code>aistudio.google.com</code>).
-                  Key được lưu cục bộ trên trình duyệt của bạn và tự động đồng
-                  bộ cho cả khung chat lẫn Phòng Thi Chấm Ảnh.
+                  Bạn bấm nút <strong>Pike Man</strong> ở góc dưới bên phải,
+                  chuyển sang tab <strong>Cấu hình</strong> và nhập mã kết nối
+                  cá nhân. Mã này được lưu cục bộ trên trình duyệt và tự động
+                  đồng bộ cho cả khung hỏi đáp lẫn phần kiểm tra bài giải tự
+                  luận.
                 </div>
               </div>
             </div>
@@ -609,8 +698,8 @@
                 font-size: 0.9rem;
               "
             >
-              Không tìm thấy câu hỏi phù hợp — hãy gửi câu hỏi qua form bên trái
-              hoặc hỏi trực tiếp Pike Man AI nhé!
+              Không tìm thấy câu hỏi phù hợp. Bạn có thể gửi câu hỏi qua biểu
+              mẫu bên trái hoặc trao đổi trực tiếp với trợ lý Pike Man.
             </div>
           </div>
         </div>
@@ -653,7 +742,7 @@
               <div>MathLab <span>Mini</span></div>
             </a>
             <p style="font-size: 0.9rem; color: var(--text-secondary)">
-              Nền tảng hỗ trợ sinh viên Khoa Công nghệ Thông tin — Trường ĐH Sư
+              Nền tảng hỗ trợ sinh viên Khoa Công nghệ Thông tin, Trường ĐH Sư
               phạm TP.HCM học tập Giải tích 1 &amp; Đại số tuyến tính.
             </p>
           </div>
@@ -698,15 +787,15 @@
           <div>
             <h4>Nhóm thực hiện</h4>
             <ul>
-              <li><strong>Vũ Huy Hoàng</strong> — MSSV: 52.01.104.124</li>
-              <li><strong>Hồ Đắc Anh Khoa</strong> — MSSV: 52.01.104.042</li>
-              <li>Học phần: Thiết kế Web (CNTT — HCMUE)</li>
+              <li><strong>Vũ Huy Hoàng</strong> - MSSV: 52.01.104.124</li>
+              <li><strong>Hồ Đắc Anh Khoa</strong> - MSSV: 52.01.104.042</li>
+              <li>Học phần: Thiết kế Web (COMP1800)</li>
             </ul>
           </div>
         </div>
         <div class="footer-bottom">
           <span
-            >© 2026 MathLab Mini — Thực hiện bởi Vũ Huy Hoàng (52.01.104.124)
+            >© 2026 MathLab Mini. Thực hiện bởi Vũ Huy Hoàng (52.01.104.124)
             &amp; Hồ Đắc Anh Khoa (52.01.104.042).</span
           >
           <span>Khoa CNTT • Trường ĐH Sư phạm TP.HCM</span>

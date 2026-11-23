@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tài khoản Sinh viên — MathLab Mini</title>
+    <title>Tài khoản Sinh viên | MathLab Mini</title>
 
     <link
       rel="icon"
@@ -150,8 +150,11 @@
             class="icon-btn"
             id="theme-toggle-btn"
             title="Đổi giao diện Sáng / Tối"
+            aria-label="Đổi giao diện Sáng / Tối"
           >
-            🌙
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
           </button>
           <a href="auth.html" class="btn btn-sm btn-primary" id="nav-auth-btn"
             >Đăng nhập</a
@@ -161,7 +164,11 @@
             id="hamburger-btn"
             aria-label="Mở menu"
           >
-            ☰
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
           </button>
         </div>
       </div>
@@ -182,7 +189,7 @@
         <div class="grid-2" id="auth-guest-view">
           <!-- Form Đăng nhập -->
           <div class="card">
-            <h3 style="margin-bottom: 6px">🔐 Đăng nhập</h3>
+            <h3 style="margin-bottom: 6px">Đăng nhập</h3>
             <p style="margin-bottom: 20px">
               Dành cho sinh viên đã có tài khoản trên trình duyệt này.
             </p>
@@ -217,9 +224,9 @@
 
           <!-- Form Đăng ký -->
           <div class="card">
-            <h3 style="margin-bottom: 6px">✨ Đăng ký Tài khoản Mới</h3>
+            <h3 style="margin-bottom: 6px">Đăng ký Tài khoản Mới</h3>
             <p style="margin-bottom: 20px">
-              Tạo nhanh hồ sơ học tập miễn phí trong 10 giây.
+              Tạo hồ sơ học tập để lưu tiến độ cá nhân.
             </p>
             <form onsubmit="handleRegister(event)">
               <div class="grid-2" style="gap: 12px">
@@ -305,23 +312,23 @@
               <div style="display: flex; align-items: center; gap: 16px">
                 <div
                   style="
-                    width: 60px;
-                    height: 60px;
-                    border-radius: 50%;
-                    background: linear-gradient(
-                      135deg,
-                      var(--primary),
-                      var(--secondary)
-                    );
+                    width: 56px;
+                    height: 56px;
+                    border-radius: 14px;
+                    background: var(--primary);
+                    border: 1px solid rgba(255, 255, 255, 0.16);
                     color: #fff;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    font-size: 1.6rem;
-                    font-weight: 800;
+                    flex-shrink: 0;
                   "
+                  aria-hidden="true"
                 >
-                  🎓
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
                 </div>
                 <div>
                   <h3 id="profile-name" style="margin-bottom: 4px">
@@ -334,13 +341,13 @@
                 </div>
               </div>
               <button class="btn btn-danger" onclick="handleLogout()">
-                🚪 Đăng xuất
+                Đăng xuất
               </button>
             </div>
           </div>
 
           <div class="card">
-            <h3 style="margin-bottom: 14px">🔑 Đổi Mật Khẩu</h3>
+            <h3 style="margin-bottom: 14px">Đổi Mật Khẩu</h3>
             <form onsubmit="handleChangePassword(event)">
               <div class="form-group">
                 <label for="old-password">Mật khẩu hiện tại:</label>
@@ -387,7 +394,7 @@
       <div class="container">
         <div class="footer-bottom" style="border-top: none; padding-top: 0">
           <span
-            >© 2026 MathLab Mini — Thực hiện bởi Vũ Huy Hoàng (52.01.104.124)
+            >© 2026 MathLab Mini. Thực hiện bởi Vũ Huy Hoàng (52.01.104.124)
             &amp; Hồ Đắc Anh Khoa (52.01.104.042).</span
           >
           <a href="index.html" style="color: var(--primary); font-weight: 600"

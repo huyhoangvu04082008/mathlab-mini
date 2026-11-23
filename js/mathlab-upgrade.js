@@ -365,7 +365,7 @@
           const prevBtn = document.createElement("button");
           prevBtn.type = "button";
           prevBtn.className = "btn btn-sm btn-outline";
-          prevBtn.textContent = `⬅️ Phần ${idx}`;
+          prevBtn.textContent = `◀ Phần ${idx}`;
           prevBtn.addEventListener("click", () =>
             scrollToUnit(unitBlocks[idx - 1].id),
           );
@@ -376,7 +376,7 @@
           const nextBtn = document.createElement("button");
           nextBtn.type = "button";
           nextBtn.className = "btn btn-sm btn-outline";
-          nextBtn.textContent = `Phần ${idx + 2} ➡️`;
+          nextBtn.textContent = `Phần ${idx + 2} ▶`;
           nextBtn.addEventListener("click", () =>
             scrollToUnit(unitBlocks[idx + 1].id),
           );
@@ -385,7 +385,7 @@
           const sumBtn = document.createElement("button");
           sumBtn.type = "button";
           sumBtn.className = "btn btn-sm btn-outline";
-          sumBtn.textContent = "📌 Tổng hợp cuối chương ➡️";
+          sumBtn.textContent = "Tổng hợp cuối chương ▶";
           sumBtn.addEventListener("click", () =>
             scrollToUnit("unit-key-summary"),
           );
@@ -1395,7 +1395,7 @@
     cmdPill.type = "button";
     cmdPill.className = "ml-dock-pill";
     cmdPill.title = "Mở bảng tìm kiếm nhanh (Ctrl + K)";
-    cmdPill.textContent = "⚡ Ctrl+K";
+    cmdPill.textContent = "Ctrl+K";
     cmdPill.addEventListener("click", () => {
       document.getElementById("ml-cmd-nav-btn")?.click();
     });
@@ -1466,7 +1466,6 @@
       trigger.className = "ml-cmd-trigger";
       trigger.title = "Tìm nhanh định lý, chương học, phòng thi (Ctrl + K)";
       trigger.innerHTML = `
-        <span>🔍</span>
         <span class="ml-cmd-trigger-label">Tìm nhanh...</span>
         <kbd class="ml-cmd-kbd">Ctrl K</kbd>
       `;
@@ -1483,7 +1482,6 @@
     backdrop.innerHTML = `
       <div class="ml-cmd-dialog" role="dialog" aria-modal="true" aria-label="Bảng lệnh tìm kiếm nhanh">
         <div class="ml-cmd-input-wrap">
-          <span style="font-size:1.1rem;">⚡</span>
           <input type="text" id="ml-cmd-input" class="ml-cmd-input" placeholder="Gõ tên định lý, chương học (VD: Taylor, Gauss, Chuỗi, Đề thi)..." autocomplete="off" />
           <button type="button" id="ml-cmd-close" class="ml-cmd-kbd" style="cursor:pointer;">ESC</button>
         </div>
@@ -1532,7 +1530,7 @@
       topics.forEach((t) => {
         items.push({
           group: "Chuyên đề & Giáo trình",
-          icon: "📘",
+          icon: "GT",
           title: `${t.code}: ${t.title}`,
           sub: `${t.subject} • ${t.level} — ${t.summary}`,
           keywords: `${t.code} ${t.title} ${t.subject} ${t.summary}`,
@@ -1546,7 +1544,7 @@
           );
           items.push({
             group: "Định lý & Mục kiến thức",
-            icon: "📐",
+            icon: "§",
             title: cleanHeading,
             sub: `${t.code} • ${t.title}`,
             keywords: `${cleanHeading} ${t.title} ${t.code}`,
@@ -1558,7 +1556,7 @@
       items.push(
         {
           group: "Phòng thi & AI",
-          icon: "⏱️",
+          icon: "GK1",
           title: "Phòng Thi Giữa Kỳ 1 (Giải tích 1 — 60 phút)",
           sub: "Bấm giờ tự động + AI Vision chấm bài viết tay",
           keywords: "thi giua ky 1 giai tich phong thi bam gio",
@@ -1569,7 +1567,7 @@
         },
         {
           group: "Phòng thi & AI",
-          icon: "⏱️",
+          icon: "GK2",
           title: "Phòng Thi Giữa Kỳ 2 (Đại số tuyến tính — 60 phút)",
           sub: "Ma trận, Định thức, Hệ PTTT + AI chấm ảnh",
           keywords: "thi giua ky 2 dai so tuyen tinh ma tran",
@@ -1580,7 +1578,7 @@
         },
         {
           group: "Phòng thi & AI",
-          icon: "🏆",
+          icon: "CK",
           title: "Phòng Thi Cuối Kỳ Tổng Hợp (Chương 1–7 — 90 phút)",
           sub: "Đề tổng hợp toàn học phần HCMUE",
           keywords: "thi cuoi ky tong hop 90 phut",
@@ -1591,7 +1589,7 @@
         },
         {
           group: "Phòng thi & AI",
-          icon: "🤖",
+          icon: "AI",
           title: "Mở Trợ lý Pike Man AI (Hỏi bài / Lộ trình / Nạp đề PDF)",
           sub: "Trợ lý Toán học & Quản lý ngân hàng đề thông minh",
           keywords: "pike man ai tro ly hoi bai nap pdf",
@@ -1604,7 +1602,7 @@
         },
         {
           group: "Điều hướng nhanh",
-          icon: "🧪",
+          icon: "LAB",
           title: "Phòng Lab Đồ thị, Taylor & Ma trận n×n",
           sub: "Công cụ trực quan hóa hàm số và tính toán ma trận",
           keywords: "phong lab do thi taylor maclaurin ma tran",
@@ -1612,7 +1610,7 @@
         },
         {
           group: "Điều hướng nhanh",
-          icon: "🌗",
+          icon: "UI",
           title: "Chuyển đổi Giao diện Sáng / Tối (Dark Mode)",
           sub: "Đổi màu nền bảo vệ mắt khi cày bài ban đêm",
           keywords: "theme dark light sang toi giao dien",
@@ -1662,7 +1660,7 @@
             ${groupHeader}
             <div class="ml-cmd-item ${idx === 0 ? "active" : ""}" data-cmd-idx="${idx}">
               <div class="ml-cmd-item-left">
-                <div class="ml-cmd-item-icon">${it.icon}</div>
+                <div class="ml-cmd-item-icon" style="font-family:var(--font-mono); font-size:0.72rem; font-weight:800; color:var(--primary);">${it.icon}</div>
                 <div style="min-width:0;">
                   <div class="ml-cmd-item-title">${escapeHTML(it.title)}</div>
                   <div class="ml-cmd-item-sub">${escapeHTML(it.sub)}</div>
@@ -1792,7 +1790,7 @@
       zenBtn.className = "btn btn-sm btn-outline";
       zenBtn.title =
         "Làm dịu các phần xung quanh để tập trung vào 1 mục đang đọc";
-      zenBtn.innerHTML = "🧘 Zen Focus";
+      zenBtn.textContent = "Zen Focus";
 
       zenBtn.addEventListener("click", () => {
         if (!modalBody.querySelector(".section-jump-bar")) {
@@ -1804,7 +1802,7 @@
         }
         const isZen = studyModal.classList.toggle("ml-zen-mode");
         zenBtn.classList.toggle("ml-zen-on", isZen);
-        zenBtn.innerHTML = isZen ? "🧘 Đang bật Zen" : "🧘 Zen Focus";
+        zenBtn.textContent = isZen ? "Đang bật Zen" : "Zen Focus";
         updateScrollSpy();
       });
 
@@ -1822,7 +1820,7 @@
           studyModal.classList.remove("ml-zen-mode");
           if (zenBtnEl) {
             zenBtnEl.classList.remove("ml-zen-on");
-            zenBtnEl.innerHTML = "🧘 Zen Focus";
+            zenBtnEl.textContent = "Zen Focus";
           }
         }
         return;
@@ -1890,14 +1888,14 @@
 
         jumpBar.innerHTML = `
           <div class="ml-sidebar-head">
-            <span class="ml-sidebar-title">📑 Mục lục bài học</span>
+            <span class="ml-sidebar-title">Mục lục bài học</span>
             <span class="ml-sidebar-count" id="ml-sidebar-progress-badge">${doneCount}/${unitSections.length} xong</span>
           </div>
           <div class="ml-sidebar-progress-track" aria-hidden="true">
             <div class="ml-sidebar-progress-fill" id="ml-sidebar-progress-fill" style="width:${pctDone}%;"></div>
           </div>
           <div class="ml-sidebar-current" id="ml-sidebar-current-label" data-active-title="${escapeHTML(firstHeading)}" title="${escapeHTML(firstHeading)}">
-            📍 ${escapeHTML(firstHeading)}
+            ${escapeHTML(firstHeading)}
           </div>
           <div class="ml-sidebar-legend">
             <span class="ml-legend-item"><i class="ml-legend-dot" style="background:#2563eb;"></i>Đang xem</span>
@@ -1908,9 +1906,9 @@
             ${pillsHTML}
           </div>
           <div class="ml-sidebar-extras">
-            ${hasExtra ? `<button type="button" class="btn btn-sm btn-outline ml-sidebar-extra-btn" data-target-id="unit-extra" title="Bài tập tổng hợp nâng cao">🏆 Bài tập tổng hợp nâng cao</button>` : ""}
-            ${hasSummary ? `<button type="button" class="btn btn-sm btn-outline ml-sidebar-extra-btn" data-target-id="unit-key-summary" title="Tổng hợp công thức cuối chương">📌 Tổng hợp công thức cuối chương</button>` : ""}
-            ${hasDocs ? `<button type="button" class="btn btn-sm btn-outline ml-sidebar-extra-btn" data-target-id="unit-docs" title="Tài liệu & Handout">📂 Tài liệu &amp; Handout</button>` : ""}
+            ${hasExtra ? `<button type="button" class="btn btn-sm btn-outline ml-sidebar-extra-btn" data-target-id="unit-extra" title="Bài tập tổng hợp nâng cao">Bài tập tổng hợp nâng cao</button>` : ""}
+            ${hasSummary ? `<button type="button" class="btn btn-sm btn-outline ml-sidebar-extra-btn" data-target-id="unit-key-summary" title="Tổng hợp công thức cuối chương">Tổng hợp công thức cuối chương</button>` : ""}
+            ${hasDocs ? `<button type="button" class="btn btn-sm btn-outline ml-sidebar-extra-btn" data-target-id="unit-docs" title="Tài liệu & Handout">Tài liệu &amp; Handout</button>` : ""}
           </div>
         `;
 
@@ -1919,12 +1917,12 @@
             btn.getAttribute("title") || btn.textContent.trim();
           const showPreview = () => {
             const lbl = document.getElementById("ml-sidebar-current-label");
-            if (lbl) lbl.textContent = `👁️ ${previewTitle}`;
+            if (lbl) lbl.textContent = previewTitle;
           };
           const restoreActive = () => {
             const lbl = document.getElementById("ml-sidebar-current-label");
             if (lbl && lbl.dataset.activeTitle) {
-              lbl.textContent = `📍 ${lbl.dataset.activeTitle}`;
+              lbl.textContent = lbl.dataset.activeTitle;
             }
           };
 
@@ -2020,7 +2018,7 @@
           activeBtn?.textContent.trim() ||
           "Nội dung bài học";
         currentLabel.dataset.activeTitle = titleText;
-        currentLabel.textContent = `📍 ${titleText}`;
+        currentLabel.textContent = titleText;
         currentLabel.title = titleText;
       }
     }
@@ -2257,13 +2255,17 @@
       btn.className = "icon-btn";
 
       const syncBtnUI = () => {
-        btn.textContent = enabled ? "🔊" : "🔇";
+        btn.textContent = "SFX";
+        btn.style.fontFamily = "var(--font-mono)";
+        btn.style.fontSize = "0.72rem";
+        btn.style.fontWeight = "800";
+        btn.style.textDecoration = enabled ? "none" : "line-through";
         btn.title = enabled
           ? "Âm thanh tương tác: Đang BẬT (bấm để tắt)"
           : "Âm thanh tương tác: Đang TẮT (bấm để bật)";
         btn.setAttribute("aria-label", btn.title);
         btn.setAttribute("aria-pressed", enabled ? "true" : "false");
-        btn.style.opacity = enabled ? "1" : "0.68";
+        btn.style.opacity = enabled ? "1" : "0.52";
       };
 
       syncBtnUI();
@@ -2373,8 +2375,8 @@
     monitor.innerHTML = `
       <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
         <div style="display:flex; gap:5px; flex-wrap:wrap;" id="ml-hero-mon-tabs">
-          <button type="button" data-mon-mode="taylor" style="padding:3px 9px; border-radius:7px; border:1px solid #38bdf8; background:rgba(14,165,233,0.22); color:#e0f2fe; font-family:var(--font-mono); font-size:0.72rem; font-weight:700; cursor:pointer;">📈 Taylor Pₙ(x)</button>
-          <button type="button" data-mon-mode="eigen" style="padding:3px 9px; border-radius:7px; border:1px solid rgba(148,163,184,0.25); background:rgba(30,41,59,0.55); color:#94a3b8; font-family:var(--font-mono); font-size:0.72rem; font-weight:700; cursor:pointer;">🔷 Vector riêng</button>
+          <button type="button" data-mon-mode="taylor" style="padding:3px 9px; border-radius:7px; border:1px solid #38bdf8; background:rgba(14,165,233,0.22); color:#e0f2fe; font-family:var(--font-mono); font-size:0.72rem; font-weight:700; cursor:pointer;">Taylor Pₙ(x)</button>
+          <button type="button" data-mon-mode="eigen" style="padding:3px 9px; border-radius:7px; border:1px solid rgba(148,163,184,0.25); background:rgba(30,41,59,0.55); color:#94a3b8; font-family:var(--font-mono); font-size:0.72rem; font-weight:700; cursor:pointer;">Vector riêng</button>
           <button type="button" data-mon-mode="riemann" style="padding:3px 9px; border-radius:7px; border:1px solid rgba(148,163,184,0.25); background:rgba(30,41,59,0.55); color:#94a3b8; font-family:var(--font-mono); font-size:0.72rem; font-weight:700; cursor:pointer;">∫ Riemann</button>
         </div>
         <span id="ml-hero-mon-hint" style="font-family:var(--font-mono); font-size:0.68rem; color:#64748b;">Rê chuột để tua</span>

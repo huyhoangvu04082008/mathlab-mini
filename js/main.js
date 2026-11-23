@@ -208,7 +208,7 @@ function initTheme() {
   document.documentElement.setAttribute("data-theme", savedTheme);
   const btn = document.getElementById("theme-toggle-btn");
   if (btn) {
-    btn.textContent = savedTheme === "dark" ? "☀️" : "🌙";
+    btn.innerHTML = savedTheme === "dark" ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>` : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
     btn.addEventListener("click", () => {
       const next =
         document.documentElement.getAttribute("data-theme") === "dark"
@@ -216,7 +216,7 @@ function initTheme() {
           : "dark";
       document.documentElement.setAttribute("data-theme", next);
       localStorage.setItem(STORAGE_KEYS.THEME, next);
-      btn.textContent = next === "dark" ? "☀️" : "🌙";
+      btn.innerHTML = next === "dark" ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>` : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
       if (typeof runCalculusLab === "function") runCalculusLab();
       if (typeof drawMathGraph === "function") drawMathGraph();
     });
@@ -241,7 +241,7 @@ function initNavigation() {
   const authNavBtn = document.getElementById("nav-auth-btn");
   if (authNavBtn) {
     if (user) {
-      authNavBtn.textContent = `${isAdminUser(user) ? "👑" : "👤"} ${user.name.split(" ").pop()}`;
+      authNavBtn.textContent = user.name.split(" ").pop();
       authNavBtn.classList.remove("btn-primary");
       authNavBtn.classList.add("btn-outline");
     } else {
@@ -333,7 +333,7 @@ function addXP(amount, reason = "") {
 
   if (newInfo.level > oldLv) {
     showToast(
-      `🎉 THĂNG CẤP ${newInfo.level}: ${newInfo.title}! (+${amount} XP)`,
+      `THĂNG CẤP ${newInfo.level}: ${newInfo.title}! (+${amount} XP)`,
       "success",
     );
   } else if (reason) {
@@ -391,15 +391,15 @@ function renderXPWidget() {
 
     <div style="display:flex; flex-wrap:wrap; align-items:center; gap:12px;">
       <div style="font-size:0.86rem;">
-        ✅ Đúng: <strong style="color:var(--success);">${totalCorrect}</strong> •
-        ❌ Sai: <strong style="color:var(--danger);">${totalWrong}</strong> •
-        🎯 Chính xác: <strong>${accuracy}%</strong>
+        Đúng: <strong style="color:var(--success);">${totalCorrect}</strong> •
+        Sai: <strong style="color:var(--danger);">${totalWrong}</strong> •
+        Chính xác: <strong>${accuracy}%</strong>
       </div>
-      <a href="products.html#community-hub" class="btn btn-sm btn-outline">🏆 BXH &amp; Diễn đàn</a>
+      <a href="products.html#community-hub" class="btn btn-sm btn-outline">BXH &amp; Diễn đàn</a>
       ${
         weakCount > 0
-          ? `<button class="btn btn-sm btn-danger" onclick="openAdaptiveReviewModal()">🔥 Ôn ${weakCount} câu hay sai</button>`
-          : `<span class="badge badge-easy">✨ Phong độ tốt</span>`
+          ? `<button class="btn btn-sm btn-danger" onclick="openAdaptiveReviewModal()">Ôn ${weakCount} câu hay sai</button>`
+          : `<span class="badge badge-easy">Phong độ tốt</span>`
       }
     </div>
   `;
@@ -452,15 +452,15 @@ function renderChapterDocumentsHTML(topicId) {
             (doc) => `
         <div class="doc-item">
           <div class="doc-info">
-            <div class="doc-icon">📄</div>
+            <div class="doc-icon" style="font-size:0.72rem; font-weight:800;">DOC</div>
             <div style="min-width:0;">
               <div class="doc-title" title="${escapeHTML(doc.title)}">${escapeHTML(doc.title)}</div>
               <div class="doc-meta">Đăng bởi: <strong>${escapeHTML(doc.uploader)}</strong> • ${doc.date} • ${doc.size || doc.type}</div>
             </div>
           </div>
           <div style="display:flex; gap:6px; flex-shrink:0;">
-            <button class="btn btn-sm btn-outline" onclick="downloadOrViewDocument('${topicId}', '${doc.id}')">⬇️ Xem / Tải</button>
-            ${admin ? `<button class="btn btn-sm btn-danger" onclick="deleteChapterDocument('${topicId}', '${doc.id}')">🗑️</button>` : ""}
+            <button class="btn btn-sm btn-outline" onclick="downloadOrViewDocument('${topicId}', '${doc.id}')">Xem / Tải</button>
+            ${admin ? `<button class="btn btn-sm btn-danger" onclick="deleteChapterDocument('${topicId}', '${doc.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>` : ""}
           </div>
         </div>
       `,
@@ -471,7 +471,7 @@ function renderChapterDocumentsHTML(topicId) {
     ? `
       <div class="admin-upload-box">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:6px;">
-          <strong style="color:var(--primary); font-size:0.92rem;">👑 Bảng điều khiển Admin: Cập nhật tài liệu chương này</strong>
+          <strong style="color:var(--primary); font-size:0.92rem;">Bảng điều khiển Admin: Cập nhật tài liệu chương này</strong>
           <span class="badge badge-admin">Admin: ${escapeHTML(getCurrentUser().name)}</span>
         </div>
         <form onsubmit="handleUploadDocument(event, '${topicId}')">
@@ -481,16 +481,16 @@ function renderChapterDocumentsHTML(topicId) {
           </div>
           <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
             <input type="url" id="doc-upload-url" class="input-control" placeholder="Hoặc dán link Google Drive / OneDrive (nếu file > 2MB)..." style="flex:1; min-width:220px;">
-            <button type="submit" class="btn btn-sm btn-primary">📤 Đăng tài liệu</button>
+            <button type="submit" class="btn btn-sm btn-primary">Đăng tài liệu</button>
           </div>
         </form>
       </div>
     `
-    : `<div style="margin-top:12px; font-size:0.82rem; color:var(--text-muted);">🔒 <em>Chỉ tài khoản Admin (Vũ Huy Hoàng &amp; Hồ Đắc Anh Khoa) mới có quyền tải lên hoặc cập nhật tài liệu mới.</em></div>`;
+    : `<div style="margin-top:12px; font-size:0.82rem; color:var(--text-muted);"><em>Chỉ tài khoản Admin (Vũ Huy Hoàng &amp; Hồ Đắc Anh Khoa) mới có quyền tải lên hoặc cập nhật tài liệu mới.</em></div>`;
 
   return `
     <div class="doc-section" id="unit-docs">
-      <h4 style="font-size:1.05rem; margin-bottom:12px;">📂 Tài liệu học tập &amp; Handout (${list.length})</h4>
+      <h4 style="font-size:1.05rem; margin-bottom:12px;">Tài liệu học tập &amp; Handout (${list.length})</h4>
       ${itemsHTML}
       ${uploadFormHTML}
     </div>
@@ -738,9 +738,9 @@ function createTopicCardHTML(topic, showAdminControls = true) {
   if (tStat) {
     statusBadge =
       (tStat.wrong || 0) > (tStat.correct || 0)
-        ? `<span class="badge badge-weak">⚠️ Cần ôn lại</span>`
+        ? `<span class="badge badge-weak">Cần ôn lại</span>`
         : (tStat.correct || 0) > 0
-          ? `<span class="badge badge-easy">✅ Đã nắm vững</span>`
+          ? `<span class="badge badge-easy">Đã nắm vững</span>`
           : "";
   }
 
@@ -751,8 +751,8 @@ function createTopicCardHTML(topic, showAdminControls = true) {
 
   const adminBtns = showAdminControls
     ? `<div style="display:flex; gap:6px;">
-        <button class="btn btn-sm btn-outline" onclick="openTopicFormModal('${topic.id}')" title="Sửa chuyên đề">✏️</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteTopic('${topic.id}')" title="Xóa chuyên đề">🗑️</button>
+        <button class="btn btn-sm btn-outline" onclick="openTopicFormModal('${topic.id}')" title="Sửa chuyên đề"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+        <button class="btn btn-sm btn-danger" onclick="deleteTopic('${topic.id}')" title="Xóa chuyên đề"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
        </div>`
     : "";
 
@@ -777,7 +777,7 @@ function createTopicCardHTML(topic, showAdminControls = true) {
         <div class="topic-formula-preview">${safeFormula}</div>
       </div>
       <div class="topic-footer">
-        <button class="btn btn-sm btn-primary" onclick="openStudyModal('${topic.id}', 'lesson')">📖 Học bài &amp; Thực hành</button>
+        <button class="btn btn-sm btn-primary" onclick="openStudyModal('${topic.id}', 'lesson')">Học bài &amp; Thực hành</button>
         ${adminBtns}
       </div>
     </article>
@@ -998,7 +998,7 @@ function toggleStudyWideMode() {
   if (!modal) return;
   const isWide = modal.classList.toggle("study-ultra-wide");
   if (btn) {
-    btn.innerHTML = isWide ? "📖 Khung đọc chuẩn" : "🖥️ Mở rộng tối đa";
+    btn.textContent = isWide ? "Khung đọc chuẩn" : "Mở rộng tối đa";
   }
 }
 
@@ -1025,13 +1025,13 @@ function openStudyModal(topicId, tab = "lesson") {
   const tabBtns = document.querySelectorAll("[data-study-tab]");
   if (tabBtns.length >= 2) {
     tabBtns[0].setAttribute("data-study-tab", "lesson");
-    tabBtns[0].textContent = "📖 Lý thuyết, Ví dụ & Bài tập";
+    tabBtns[0].textContent = "Lý thuyết, Ví dụ & Bài tập";
     tabBtns[1].setAttribute("data-study-tab", "quiz");
-    tabBtns[1].textContent = "🎯 Quiz Thích ứng & XP";
+    tabBtns[1].textContent = "Quiz Thích ứng & XP";
     if (tabBtns[2]) {
       tabBtns[2].style.display = "";
       tabBtns[2].setAttribute("data-study-tab", "exam");
-      tabBtns[2].textContent = "⏱️ Phòng Thi & AI Chấm Ảnh";
+      tabBtns[2].textContent = "Phòng Thi & Chấm Tự Luận";
     }
   }
 
@@ -1058,20 +1058,20 @@ function regenerateSingleSectionExercise(secIdx) {
       )
       .join("");
     const trapHTML = newEx.trap
-      ? `<div class="rubric-trap">⚠️ <b>Lỗi mất điểm tự luận:</b> ${newEx.trap}</div>`
+      ? `<div class="rubric-trap"><b>Lỗi mất điểm tự luận:</b> ${newEx.trap}</div>`
       : "";
     qBox.innerHTML = newEx.question;
     solBox.innerHTML = `<div class="rubric-box">${stepsHTML}${trapHTML}</div>`;
     renderMath(qBox);
     renderMath(solBox);
-    showToast(`🔄 Đã đổi bài tập mới cho Phần ${secIdx + 1}!`, "info");
+    showToast(`Đã đổi bài tập mới cho Phần ${secIdx + 1}!`, "info");
   }
 }
 
 function markExerciseSolved(btn, topicId = activeStudyTopicId, secIdx = null) {
   if (btn.disabled) return;
   btn.disabled = true;
-  btn.textContent = "✅ Đã hoàn thành (+15 XP)";
+  btn.textContent = "Đã hoàn thành (+15 XP)";
   btn.classList.remove("btn-primary");
   btn.classList.add("btn-outline");
 
@@ -1177,14 +1177,14 @@ function switchStudyTab(tab) {
             )
             .join("");
           const exTrap = item.checkpoint.trap
-            ? `<div class="rubric-trap">⚠️ <b>Lưu ý trình bày tự luận:</b> ${item.checkpoint.trap}</div>`
+            ? `<div class="rubric-trap"><b>Lưu ý trình bày tự luận:</b> ${item.checkpoint.trap}</div>`
             : "";
 
           exampleHTML = `
             <div class="sub-block-example">
-              <div class="sub-label" style="color:#d97706;">💡 II. Ví dụ minh họa mẫu (Chuẩn giáo trình)</div>
+              <div class="sub-label" style="color:#d97706;">II. Ví dụ minh họa mẫu (Chuẩn giáo trình)</div>
               <p style="font-weight:600; margin-bottom:8px;">${item.checkpoint.question}</p>
-              <button type="button" class="btn btn-sm btn-outline" onclick="toggleSolution('ex-demo-${idx}')">📖 Xem / Ẩn lời giải mẫu</button>
+              <button type="button" class="btn btn-sm btn-outline" onclick="toggleSolution('ex-demo-${idx}')">Xem / Ẩn lời giải mẫu</button>
               <div class="solution-box open" id="ex-demo-${idx}">
                 <div class="rubric-box">${exSteps}${exTrap}</div>
               </div>
@@ -1206,19 +1206,19 @@ function switchStudyTab(tab) {
           ? `
             <div class="sub-block-practice">
               <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-                <span class="sub-label" style="color:var(--secondary); margin-bottom:0;">✍️ III. Bài tập thực hành Phần ${idx + 1}</span>
+                <span class="sub-label" style="color:var(--secondary); margin-bottom:0;">III. Bài tập thực hành Phần ${idx + 1}</span>
                 <div style="display:flex; gap:6px; align-items:center;">
                   <span class="badge ${pairedEx.level === "Khó" ? "badge-hard" : "badge-medium"}">${pairedEx.level}</span>
-                  <button type="button" class="btn btn-sm btn-outline" onclick="regenerateSingleSectionExercise(${idx})">🔄 Đổi số liệu</button>
+                  <button type="button" class="btn btn-sm btn-outline" onclick="regenerateSingleSectionExercise(${idx})">Đổi số liệu</button>
                 </div>
               </div>
               <p id="sec-ex-q-${idx}" style="font-weight:600; margin-bottom:10px;">${pairedEx.question}</p>
               <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                <button type="button" class="btn btn-sm btn-outline" onclick="toggleSolution('sec-ex-sol-${idx}')">👁️ Xem Barem chấm tự luận</button>
+                <button type="button" class="btn btn-sm btn-outline" onclick="toggleSolution('sec-ex-sol-${idx}')">Xem Barem chấm tự luận</button>
                 ${
                   isDone
-                    ? `<button type="button" class="btn btn-sm btn-outline" disabled>✅ Đã hoàn thành (+15 XP)</button>`
-                    : `<button type="button" class="btn btn-sm btn-primary" onclick="markExerciseSolved(this, '${topic.id}', ${idx})">✔️ Đã tự giải xong (+15 XP)</button>`
+                    ? `<button type="button" class="btn btn-sm btn-outline" disabled>Đã hoàn thành (+15 XP)</button>`
+                    : `<button type="button" class="btn btn-sm btn-primary" onclick="markExerciseSolved(this, '${topic.id}', ${idx})">Đã tự giải xong (+15 XP)</button>`
                 }
               </div>
               <div class="solution-box" id="sec-ex-sol-${idx}">
@@ -1232,7 +1232,7 @@ function switchStudyTab(tab) {
           <div class="unit-block" id="unit-sec-${idx}">
             <div class="unit-header">${item.heading}</div>
             <div class="sub-block-theory">
-              <div class="sub-label" style="color:var(--primary);">📘 I. Lý thuyết &amp; Công thức trọng tâm</div>
+              <div class="sub-label" style="color:var(--primary);">I. Lý thuyết &amp; Công thức trọng tâm</div>
               <div>${item.content}</div>
             </div>
             ${exampleHTML}
@@ -1254,7 +1254,7 @@ function switchStudyTab(tab) {
       extraExercises.length > 0
         ? `
           <div class="unit-block" id="unit-extra">
-            <div class="unit-header">🏆 Bài tập tổng hợp nâng cao cuối chương</div>
+            <div class="unit-header">Bài tập tổng hợp nâng cao cuối chương</div>
             ${extraExercises
               .map((ex, eIdx) => {
                 const isExtraDone =
@@ -1267,11 +1267,11 @@ function switchStudyTab(tab) {
                 </div>
                 <p style="font-weight:600; margin-bottom:10px;">${ex.question}</p>
                 <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                  <button type="button" class="btn btn-sm btn-outline" onclick="toggleSolution('extra-sol-${eIdx}')">👁️ Xem Barem chấm tự luận</button>
+                  <button type="button" class="btn btn-sm btn-outline" onclick="toggleSolution('extra-sol-${eIdx}')">Xem Barem chấm tự luận</button>
                   ${
                     isExtraDone
-                      ? `<button type="button" class="btn btn-sm btn-outline" disabled>✅ Đã hoàn thành (+15 XP)</button>`
-                      : `<button type="button" class="btn btn-sm btn-primary" onclick="markExerciseSolved(this, '${topic.id}', 'extra-${eIdx}')">✔️ Đã tự giải xong (+15 XP)</button>`
+                      ? `<button type="button" class="btn btn-sm btn-outline" disabled>Đã hoàn thành (+15 XP)</button>`
+                      : `<button type="button" class="btn btn-sm btn-primary" onclick="markExerciseSolved(this, '${topic.id}', 'extra-${eIdx}')">Đã tự giải xong (+15 XP)</button>`
                   }
                 </div>
                 <div class="solution-box" id="extra-sol-${eIdx}">${ex.solution}</div>
@@ -1287,8 +1287,8 @@ function switchStudyTab(tab) {
       <div class="section-jump-bar">
         <span style="font-size:0.84rem; font-weight:700; align-self:center;">Đi nhanh tới:</span>
         ${jumpPills}
-        ${topic.exercises.length > topic.theory.length ? `<button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('unit-extra').scrollIntoView({behavior:'smooth'})">🏆 Bài tổng hợp</button>` : ""}
-        <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('unit-docs').scrollIntoView({behavior:'smooth'})">📂 Tài liệu</button>
+        ${topic.exercises.length > topic.theory.length ? `<button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('unit-extra').scrollIntoView({behavior:'smooth'})">Bài tổng hợp</button>` : ""}
+        <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('unit-docs').scrollIntoView({behavior:'smooth'})">Tài liệu</button>
       </div>
       ${unitsHTML}
       ${extraHTML}
@@ -1306,7 +1306,7 @@ function switchStudyTab(tab) {
 
     body.innerHTML = `<div class="study-reading-container">
       <div style="margin-bottom:14px; font-size:0.95rem; color:var(--text-secondary);">
-        🧠 <strong>Chế độ Quiz Thích ứng:</strong> Các câu bạn từng làm sai được tự động đẩy lên đầu để ưu tiên ôn tập và cộng thưởng +40 XP khi sửa đúng.
+        <strong>Chế độ Quiz Thích ứng:</strong> Các câu bạn từng làm sai được tự động đẩy lên đầu để ưu tiên ôn tập và cộng thưởng +40 XP khi sửa đúng.
       </div>
       <form id="quiz-form" onsubmit="submitTopicQuiz(event)">
         ${indexedQuiz
@@ -1317,7 +1317,7 @@ function switchStudyTab(tab) {
               <span style="font-weight:700;">Câu ${displayIdx + 1}:</span>
               ${
                 q.priority > 0
-                  ? `<span class="badge badge-weak">🔥 Hay sai (${q.stat.wrong} lần) — Ưu tiên ôn lại</span>`
+                  ? `<span class="badge badge-weak">Hay sai (${q.stat.wrong} lần) — Ưu tiên ôn lại</span>`
                   : `<span class="badge badge-calc">Đúng ${q.stat.correct} / Sai ${q.stat.wrong}</span>`
               }
             </div>
@@ -1339,7 +1339,7 @@ function switchStudyTab(tab) {
           .join("")}
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; flex-wrap:wrap; gap:10px;">
           <div id="quiz-result-summary" style="font-weight:700;"></div>
-          <button type="submit" class="btn btn-primary">✅ Nộp bài &amp; Tích lũy XP</button>
+          <button type="submit" class="btn btn-primary">Nộp bài &amp; Tích lũy XP</button>
         </div>
       </form>
     </div>`;
@@ -1405,7 +1405,7 @@ function submitTopicQuiz(event) {
 
     const expEl = document.getElementById(`quiz-exp-${origIdx}`);
     expEl.style.display = "block";
-    expEl.innerHTML = `💡 <strong>Giải thích:</strong> ${q.explanation}`;
+    expEl.innerHTML = `<strong>Giải thích:</strong> ${q.explanation}`;
     renderMath(expEl);
   });
 
@@ -1503,7 +1503,7 @@ function renderCommunityHub() {
               ? "rank-3"
               : "";
       const medalIcon =
-        rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`;
+        `#${rank}`;
       const isMe = entry.name === myName;
       const lv = getLevelInfo(entry.xp);
 
@@ -1538,7 +1538,7 @@ function renderCommunityHub() {
       <div class="forum-post">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
           <div>
-            <strong>${escapeHTML(p.author)}</strong> ${p.role === "admin" ? '<span class="badge badge-admin">👑 Admin</span>' : ""}
+            <strong>${escapeHTML(p.author)}</strong> ${p.role === "admin" ? '<span class="badge badge-admin">Admin</span>' : ""}
             <span style="font-size:0.8rem; color:var(--text-muted);"> • ${escapeHTML(p.time)}</span>
           </div>
           <span class="badge badge-calc">${escapeHTML(p.topicTag)}</span>
@@ -1546,8 +1546,8 @@ function renderCommunityHub() {
         <h4 style="margin-bottom:6px; font-size:1.02rem;">${escapeHTML(p.title)}</h4>
         <p style="font-size:0.93rem; color:var(--text-secondary); margin-bottom:12px;">${escapeHTML(p.content)}</p>
         <div style="display:flex; gap:10px; align-items:center;">
-          <button type="button" class="btn btn-sm btn-outline" onclick="likeForumPost('${p.id}')">👍 Hữu ích (${p.likes})</button>
-          <span style="font-size:0.84rem; color:var(--text-muted);">💬 ${p.replies.length} phản hồi</span>
+          <button type="button" class="btn btn-sm btn-outline" onclick="likeForumPost('${p.id}')">Hữu ích (${p.likes})</button>
+          <span style="font-size:0.84rem; color:var(--text-muted);">${p.replies.length} phản hồi</span>
         </div>
 
         <div class="forum-reply-list">
@@ -1555,7 +1555,7 @@ function renderCommunityHub() {
             .map(
               (rep) => `
             <div class="forum-reply-item">
-              <strong>${escapeHTML(rep.author)}</strong> ${rep.role === "admin" ? '<span class="badge badge-admin">👑 Admin</span>' : ""}: ${escapeHTML(rep.text)}
+              <strong>${escapeHTML(rep.author)}</strong> ${rep.role === "admin" ? '<span class="badge badge-admin">Admin</span>' : ""}: ${escapeHTML(rep.text)}
             </div>
           `,
             )
@@ -1581,7 +1581,7 @@ function renderCommunityHub() {
       <!-- Cột trái: Bảng xếp hạng -->
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-          <h3 style="font-size:1.15rem;">🏆 Bảng xếp hạng Cao thủ XP</h3>
+          <h3 style="font-size:1.15rem;">Bảng xếp hạng Cao thủ XP</h3>
           <span class="badge badge-easy">Live</span>
         </div>
         ${leaderboardHTML}
@@ -1590,7 +1590,7 @@ function renderCommunityHub() {
       <!-- Cột phải: Diễn đàn thảo luận -->
       <div>
         <div class="card" style="margin-bottom:18px;">
-          <h3 style="font-size:1.12rem; margin-bottom:12px;">✍️ Đặt câu hỏi / Chia sẻ mẹo giải Toán</h3>
+          <h3 style="font-size:1.12rem; margin-bottom:12px;">Đặt câu hỏi / Chia sẻ mẹo giải Toán</h3>
           <form onsubmit="createForumPost(event)">
             <div class="grid-2" style="gap:10px; margin-bottom:10px;">
               <input type="text" id="forum-post-title" class="input-control" placeholder="Tiêu đề câu hỏi (VD: Cách tìm cơ sở không gian nghiệm)..." required>
@@ -1605,12 +1605,12 @@ function renderCommunityHub() {
               </select>
             </div>
             <textarea id="forum-post-content" class="textarea-control" rows="2" placeholder="Nhập nội dung thảo luận (hỗ trợ gõ công thức Toán giữa cặp dấu $...$)..." required style="margin-bottom:10px;"></textarea>
-            <button type="submit" class="btn btn-sm btn-primary">📤 Đăng bài thảo luận (+10 XP)</button>
+            <button type="submit" class="btn btn-sm btn-primary">Đăng bài thảo luận (+10 XP)</button>
           </form>
         </div>
 
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-          <strong>💬 Thảo luận mới nhất (${posts.length})</strong>
+          <strong>Thảo luận mới nhất (${posts.length})</strong>
           <select id="forum-filter-tag" class="select-control" style="max-width:200px;" onchange="renderCommunityHub()">
             <option value="all" ${filterTag === "all" ? "selected" : ""}>Tất cả chuyên đề</option>
             <option value="GT1 • Chương 1" ${filterTag === "GT1 • Chương 1" ? "selected" : ""}>GT1 • Chương 1</option>
@@ -1828,8 +1828,8 @@ function initAuthPage() {
     guestView.style.display = "none";
     profileView.style.display = "block";
     const roleLabel = isAdminUser(user)
-      ? " 👑 (Quản trị viên - Quyền Upload Tài liệu)"
-      : " 🎓 (Sinh viên)";
+      ? " (Quản trị viên - Quyền Upload Tài liệu)"
+      : " (Sinh viên)";
     document.getElementById("profile-name").textContent = user.name + roleLabel;
     document.getElementById("profile-email").textContent = user.email;
     document.getElementById("profile-student-id").textContent = user.studentId;
@@ -1944,7 +1944,7 @@ switchStudyTab = function (tab) {
       summarySection.id = "unit-key-summary";
       summarySection.innerHTML = `
         <div class="chapter-summary-header">
-          <h3>📌 TỔNG HỢP KIẾN THỨC &amp; CÔNG THỨC TRỌNG TÂM CUỐI CHƯƠNG</h3>
+          <h3>TỔNG HỢP KIẾN THỨC &amp; CÔNG THỨC TRỌNG TÂM CUỐI CHƯƠNG</h3>
           <span class="badge badge-calc">Chốt kiến thức ôn thi</span>
         </div>
         <div class="summary-grid-cards">
@@ -1963,7 +1963,7 @@ switchStudyTab = function (tab) {
           extraNotes.length > 0
             ? `
           <div style="margin-top:16px; padding-top:14px; border-top:1px dashed var(--border-color);">
-            <strong style="color:var(--secondary); font-size:0.94rem;">✨ Kiến thức &amp; Công thức cộng đồng đóng góp tự động (${extraNotes.length}):</strong>
+            <strong style="color:var(--secondary); font-size:0.94rem;">Kiến thức &amp; Công thức cộng đồng đóng góp tự động (${extraNotes.length}):</strong>
             <div style="display:grid; gap:10px; margin-top:10px;">
               ${extraNotes
                 .map(
@@ -2009,7 +2009,7 @@ function openExamHubModal(examId = "midterm-1") {
   }
 
   document.getElementById("study-modal-code").textContent =
-    "PHÒNG THI THỬ HCMUE • CÓ BẤM GIỜ & AI CHẤM ẢNH";
+    "PHÒNG THI THỬ HCMUE • BẤM GIỜ & CHẤM TỰ LUẬN";
   document.getElementById("study-modal-title").textContent = examData.title;
   modal.classList.add("open");
   document.body.style.overflow = "hidden";
@@ -2024,7 +2024,7 @@ function renderExamRoom(bodyEl) {
   }
   const exam = EXAM_BANK[activeExamId];
   document.getElementById("study-modal-code").textContent =
-    "PHÒNG THI BẤM GIỜ & AI VISION GRADER";
+    "PHÒNG THI BẤM GIỜ & TRỢ LÝ PIKE MAN";
   document.getElementById("study-modal-title").textContent = exam.title;
 
   activeExamSecondsLeft = exam.durationMinutes * 60;
@@ -2060,8 +2060,8 @@ function renderExamRoom(bodyEl) {
 
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
           <div class="exam-timer-clock" id="exam-clock-display">${formatExamTime(activeExamSecondsLeft)}</div>
-          <button type="button" class="btn btn-sm btn-secondary" id="exam-start-btn" onclick="startExamCountdown()">▶️ Bắt đầu tính giờ</button>
-          <button type="button" class="btn btn-sm btn-primary" onclick="submitTimedExam()">✅ Nộp bài thi</button>
+          <button type="button" class="btn btn-sm btn-secondary" id="exam-start-btn" onclick="startExamCountdown()">Bắt đầu tính giờ</button>
+          <button type="button" class="btn btn-sm btn-primary" onclick="submitTimedExam()">Nộp bài thi</button>
         </div>
       </div>
 
@@ -2100,8 +2100,8 @@ function renderExamRoom(bodyEl) {
 
         <div class="ai-grader-card">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
-            <strong style="color:var(--secondary); font-size:1rem;">📸 Nộp ảnh bài làm viết tay để AI chấm điểm &amp; sửa lỗi từng bước</strong>
-            <span class="badge badge-linalg">Gemini Vision AI</span>
+            <strong style="color:var(--secondary); font-size:1rem;">Nộp ảnh bài làm viết tay để trợ lý Pike Man chấm điểm &amp; sửa lỗi từng bước</strong>
+            <span class="badge badge-linalg">Trợ lý Pike Man</span>
           </div>
           <p style="font-size:0.88rem; color:var(--text-secondary); margin-bottom:12px;">
             Giải bài ra giấy, chụp ảnh rõ nét rồi tải lên bên dưới. AI sẽ đọc bài viết tay của bạn, đối chiếu với đề thi và barem chuẩn để chấm điểm chi tiết.
@@ -2122,16 +2122,16 @@ function renderExamRoom(bodyEl) {
 
           <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:12px;">
             <button type="button" class="btn btn-secondary" id="ai-grade-btn" onclick="gradeEssayPhotoWithAI()">
-              🤖 Chấm bài qua ảnh bằng AI
+              Chấm bài qua ảnh với Pike Man
             </button>
             <button type="button" class="btn btn-outline" onclick="toggleSolution('exam-official-rubric')">
-              📋 Xem Barem &amp; Lời giải chuẩn để tự đối chiếu
+              Xem Barem &amp; Lời giải chuẩn để tự đối chiếu
             </button>
           </div>
 
           <div class="solution-box" id="exam-official-rubric" style="margin-top:12px;">
             <div class="rubric-box" style="white-space:pre-line;">
-              <strong>📋 Barem chấm điểm chuẩn HCMUE:</strong><br>${exam.essay.rubric}
+              <strong>Barem chấm điểm chuẩn HCMUE:</strong><br>${exam.essay.rubric}
             </div>
           </div>
 
@@ -2172,7 +2172,7 @@ function startExamCountdown() {
   if (activeExamTimer) return;
   const clockEl = document.getElementById("exam-clock-display");
   const btn = document.getElementById("exam-start-btn");
-  if (btn) btn.textContent = "⏳ Đang làm bài...";
+  if (btn) btn.textContent = "Đang làm bài...";
   showToast("Đã bắt đầu tính giờ làm bài thi!", "info");
 
   activeExamTimer = setInterval(() => {
@@ -2184,7 +2184,7 @@ function startExamCountdown() {
     if (activeExamSecondsLeft <= 0) {
       clearInterval(activeExamTimer);
       activeExamTimer = null;
-      showToast("⏰ Đã hết giờ làm bài! Hệ thống tự động nộp bài.", "error");
+      showToast("Đã hết giờ làm bài! Hệ thống tự động nộp bài.", "error");
       submitTimedExam();
     }
   }, 1000);
@@ -2216,7 +2216,7 @@ function submitTimedExam() {
     const exp = document.getElementById(`exam-exp-${idx}`);
     if (exp) {
       exp.style.display = "block";
-      exp.innerHTML = `💡 <strong>Giải thích:</strong> ${q.explanation}`;
+      exp.innerHTML = `<strong>Giải thích:</strong> ${q.explanation}`;
       renderMath(exp);
     }
   });
@@ -2224,7 +2224,7 @@ function submitTimedExam() {
   const mcqPoints = ((correct / exam.mcqs.length) * 6).toFixed(2);
   const scoreBox = document.getElementById("exam-mcq-score-box");
   if (scoreBox) {
-    scoreBox.innerHTML = `🎯 Kết quả Phần Trắc nghiệm: ${correct}/${exam.mcqs.length} câu đúng — Đạt ${mcqPoints}/6.0 điểm (+${correct * 20} XP)`;
+    scoreBox.innerHTML = `Kết quả Phần Trắc nghiệm: ${correct}/${exam.mcqs.length} câu đúng — Đạt ${mcqPoints}/6.0 điểm (+${correct * 20} XP)`;
   }
   addXP(correct * 20 + 15, `Hoàn thành đề thi ${exam.title}`);
 }
@@ -2270,7 +2270,7 @@ async function gradeEssayPhotoWithAI() {
     renderMath(document.getElementById("exam-official-rubric"));
     resultBox.innerHTML = `
       <div class="ai-feedback-result">
-        <strong>ℹ️ Chưa nhập Gemini API Key:</strong> Hệ thống đã mở sẵn <strong>Barem &amp; Lời giải chuẩn</strong> ở trên để bạn tự đối chiếu từng bước với ảnh bài làm của mình. Nếu muốn AI tự đọc chữ viết tay và chấm điểm tự động, hãy dán Gemini API Key vào ô bên trên rồi bấm lại nút Chấm bài nhé!
+        <strong>Chưa nhập Gemini API Key:</strong> Hệ thống đã mở sẵn <strong>Barem &amp; Lời giải chuẩn</strong> ở trên để bạn tự đối chiếu từng bước với ảnh bài làm của mình. Nếu muốn AI tự đọc chữ viết tay và chấm điểm tự động, hãy dán Gemini API Key vào ô bên trên rồi bấm lại nút Chấm bài nhé!
       </div>
     `;
     return;
@@ -2279,7 +2279,7 @@ async function gradeEssayPhotoWithAI() {
   syncSharedGeminiKey(apiKey);
   if (btn) {
     btn.disabled = true;
-    btn.textContent = "⏳ AI đang đọc bài viết tay & chấm điểm...";
+    btn.textContent = "Pike Man đang đọc bài viết tay & chấm điểm...";
   }
 
   try {
@@ -2311,8 +2311,8 @@ ${exam.essay.rubric}`;
           if (btn) {
             btn.textContent =
               idx === 0
-                ? `⏳ AI (${activeModel}) đang đọc bài viết tay...`
-                : `⏳ Model bận, tự chuyển sang ${activeModel}...`;
+                ? `Pike Man (${activeModel}) đang đọc bài viết tay...`
+                : `Model bận, tự chuyển sang ${activeModel}...`;
           }
         },
       });
@@ -2366,7 +2366,7 @@ ${exam.essay.rubric}`;
     resultBox.innerHTML = `
       <div class="ai-feedback-result">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-          <span style="font-weight:800; color:var(--secondary);">🤖 Kết quả chấm tự luận từ AI Vision:</span>
+          <span style="font-weight:800; color:var(--secondary);">Kết quả chấm tự luận từ trợ lý Pike Man:</span>
           <span style="font-size:0.78rem; color:var(--text-muted); font-family:var(--font-mono);">Model: ${escapeHTML(modelUsed)}</span>
         </div>
         <div style="white-space:pre-line;">${formattedReply}</div>
@@ -2377,14 +2377,14 @@ ${exam.essay.rubric}`;
   } catch (err) {
     resultBox.innerHTML = `
       <div class="ai-feedback-result" style="border-left-color:var(--danger);">
-        <strong>⚠️ Không thể gọi AI Vision:</strong> ${escapeHTML(err.message)}. Hệ thống đã mở sẵn Barem chuẩn ở trên để bạn đối chiếu trực tiếp.
+        <strong>Không thể kết nối trợ lý Pike Man:</strong> ${escapeHTML(err.message)}. Hệ thống đã mở sẵn Barem chuẩn ở trên để bạn đối chiếu trực tiếp.
       </div>
     `;
     document.getElementById("exam-official-rubric")?.classList.add("open");
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = "🤖 Chấm bài qua ảnh bằng AI";
+      btn.textContent = "Chấm bài qua ảnh với Pike Man";
     }
   }
 }
@@ -2426,10 +2426,10 @@ function renderContributeHub() {
     <div class="contrib-hub-card">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:14px; margin-bottom:20px;">
         <div>
-          <span class="badge badge-linalg" style="margin-bottom:8px;">AI AUTO-UPGRADE KNOWLEDGE HUB</span>
-          <h2 style="font-size:1.6rem;">🤝 Đóng Góp &amp; AI Tự Động Nâng Cấp Nguồn Học Liệu</h2>
+          <span class="badge badge-linalg" style="margin-bottom:8px;">KHO HỌC LIỆU MỞ RỘNG HCMUE</span>
+          <h2 style="font-size:1.6rem;">Đóng Góp &amp; Tự Động Nâng Cấp Nguồn Học Liệu</h2>
           <p style="color:var(--text-secondary); font-size:0.95rem;">
-            Tải lên <strong>PDF đề thi/giáo trình, ảnh chụp đề bài, file .txt/.md</strong> hoặc nhập công thức mới: <strong>Pike Man AI</strong> sẽ đọc tài liệu, tự phân loại đúng chương, giải chi tiết chuẩn $\\LaTeX$ và nạp câu hỏi Trắc nghiệm + Tự luận thẳng vào kho đề của web.
+            Tải lên <strong>PDF đề thi/giáo trình, ảnh chụp đề bài, file .txt/.md</strong> hoặc nhập công thức mới: <strong>trợ lý Pike Man</strong> sẽ đọc tài liệu, tự phân loại đúng chương, giải chi tiết chuẩn $\\LaTeX$ và nạp câu hỏi Trắc nghiệm + Tự luận thẳng vào kho đề của web.
           </p>
         </div>
         <div style="display:flex; gap:10px;">
@@ -2449,7 +2449,7 @@ function renderContributeHub() {
           <div class="form-group" style="margin-bottom:0;">
             <label for="contrib-topic-id">Chương đích tự động cập nhật:</label>
             <select id="contrib-topic-id" class="select-control" style="width:100%;">
-              <option value="auto" selected>🤖 AI tự nhận diện &amp; phân loại đúng chương</option>
+              <option value="auto" selected>Tự động nhận diện &amp; phân loại đúng chương</option>
               ${topicOptions}
             </select>
           </div>
@@ -2471,7 +2471,7 @@ function renderContributeHub() {
         <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border-radius:12px; background:var(--bg-surface-alt); border:1px solid var(--border-color); margin-bottom:14px;">
           <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; font-size:0.9rem; margin:0;">
             <input type="checkbox" id="contrib-use-ai" checked>
-            <span>🤖 Dùng Pike Man AI đọc tài liệu &amp; tự động tạo câu hỏi Trắc nghiệm + Tự luận có barem</span>
+            <span>Dùng trợ lý Pike Man đọc tài liệu &amp; tự động tạo câu hỏi Trắc nghiệm + Tự luận có barem</span>
           </label>
           <div style="display:flex; align-items:center; gap:8px; min-width:240px; flex:1; max-width:340px;">
             <input type="password" id="contrib-api-key" class="input-control" style="width:100%; padding:7px 10px; font-size:0.84rem;" placeholder="Gemini API Key (AIzaSy...)" value="${escapeHTML(savedApiKey)}" onchange="syncSharedGeminiKey(this.value)">
@@ -2480,10 +2480,10 @@ function renderContributeHub() {
 
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
           <span id="contrib-status-text" style="font-size:0.85rem; color:var(--text-muted); font-weight:600;">
-            ⚡ AI tự động bóc tách câu hỏi, chuẩn hóa KaTeX và gộp vào ngân hàng đề của từng chương.
+            Tự động bóc tách câu hỏi, chuẩn hóa KaTeX và gộp vào ngân hàng đề của từng chương.
           </span>
           <button type="submit" id="contrib-submit-btn" class="btn btn-primary">
-            🚀 Đóng góp &amp; Tự động nâng cấp học liệu (+50 XP)
+            Đóng góp &amp; Tự động nâng cấp học liệu (+50 XP)
           </button>
         </div>
       </form>
@@ -2564,12 +2564,12 @@ async function handleCommunityContribute(event) {
   if (useAI && apiKey && window.PikeManAI) {
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = "⏳ Pike Man AI đang đọc tài liệu...";
+      submitBtn.textContent = "Trợ lý Pike Man đang đọc tài liệu...";
     }
     if (statusEl) {
       statusEl.style.color = "var(--primary)";
       statusEl.textContent =
-        "⏳ AI đang phân tích file/nội dung, giải chi tiết và chuẩn hóa KaTeX...";
+        "Trợ lý Pike Man đang phân tích file/nội dung, giải chi tiết và chuẩn hóa KaTeX...";
     }
 
     try {
@@ -2582,8 +2582,8 @@ async function handleCommunityContribute(event) {
           if (statusEl) {
             statusEl.textContent =
               idx === 0
-                ? `⏳ Pike Man (${mod}) đang đọc tài liệu & trích xuất câu hỏi...`
-                : `⏳ Đang chuyển sang model dự phòng (${mod})...`;
+                ? `Pike Man (${mod}) đang đọc tài liệu & trích xuất câu hỏi...`
+                : `Đang chuyển sang model dự phòng (${mod})...`;
           }
         },
       });
@@ -2625,10 +2625,10 @@ async function handleCommunityContribute(event) {
           const label = tp ? `${tp.code}: ${tp.title}` : tid;
           return `
             <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:8px 12px; border-radius:10px; background:var(--bg-surface); border:1px solid var(--border-color);">
-              <strong style="font-size:0.88rem;">📘 ${escapeHTML(label)}</strong>
+              <strong style="font-size:0.88rem;">${escapeHTML(label)}</strong>
               <div style="display:flex; gap:6px;">
-                <button type="button" class="btn btn-sm btn-outline" onclick="openStudyModal('${tid}', 'lesson')">📖 Xem lý thuyết &amp; tự luận</button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="openStudyModal('${tid}', 'quiz')">🎯 Làm Quiz mới nạp</button>
+                <button type="button" class="btn btn-sm btn-outline" onclick="openStudyModal('${tid}', 'lesson')">Xem lý thuyết &amp; tự luận</button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="openStudyModal('${tid}', 'quiz')">Làm Quiz mới nạp</button>
               </div>
             </div>
           `;
@@ -2639,7 +2639,7 @@ async function handleCommunityContribute(event) {
         resultPanel.innerHTML = `
           <div style="padding:16px; border-radius:14px; background:var(--secondary-soft); border:1px solid var(--secondary);">
             <div style="font-weight:800; color:var(--secondary); font-size:1rem; margin-bottom:6px;">
-              🎉 Pike Man AI (${escapeHTML(extracted.modelUsed)}) đã tự động nâng cấp học liệu thành công!
+              Trợ lý Pike Man (${escapeHTML(extracted.modelUsed)}) đã tự động nâng cấp học liệu thành công!
             </div>
             <p style="font-size:0.9rem; margin-bottom:10px;">
               Nguồn <strong>"${escapeHTML(extracted.sourceTitle)}"</strong> đã được nạp vào ngân hàng web:
@@ -2658,23 +2658,23 @@ async function handleCommunityContribute(event) {
       if (statusEl) {
         statusEl.style.color = "var(--success)";
         statusEl.textContent =
-          "✅ Hoàn tất! Toàn bộ câu hỏi mới đã sẵn sàng trong Phòng học & Quiz.";
+          "Hoàn tất! Toàn bộ câu hỏi mới đã sẵn sàng trong Phòng học & Quiz.";
       }
       showToast(
-        `🎉 AI đã nạp +${summary.totalExercise} tự luận & +${summary.totalQuiz} câu trắc nghiệm vào web!`,
+        `Đã nạp +${summary.totalExercise} tự luận & +${summary.totalQuiz} câu trắc nghiệm vào web!`,
         "success",
       );
     } catch (err) {
       if (statusEl) {
         statusEl.style.color = "var(--danger)";
-        statusEl.textContent = `⚠️ Lỗi AI: ${err.message}`;
+        statusEl.textContent = `Lỗi xử lý: ${err.message}`;
       }
       showToast(`Lỗi khi AI đọc tài liệu: ${err.message}`, "error");
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.textContent =
-          "🚀 Đóng góp & Tự động nâng cấp học liệu (+50 XP)";
+          "Đóng góp & Tự động nâng cấp học liệu (+50 XP)";
       }
     }
     return;
@@ -2690,8 +2690,8 @@ async function handleCommunityContribute(event) {
   renderContributeHub();
   showToast(
     useAI && !apiKey
-      ? "✅ Đã lưu tài liệu vào chương! (Nhập thêm Gemini API Key để AI tự động sinh câu hỏi từ file nhé)"
-      : "✅ Đã tự động cập nhật tài liệu & kiến thức mới vào chương!",
+      ? "Đã lưu tài liệu vào chương! (Nhập thêm Gemini API Key để trợ lý Pike Man tự động sinh câu hỏi từ file nhé)"
+      : "Đã tự động cập nhật tài liệu & kiến thức mới vào chương!",
     "success",
   );
 }

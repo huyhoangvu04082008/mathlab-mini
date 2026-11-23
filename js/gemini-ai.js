@@ -1,5 +1,5 @@
 // =========================================================================
-// MATHLAB MINI — PIKE MAN AI (GOOGLE GEMINI) + TAYLOR-MACLAURIN (n -> ∞)
+// MATHLAB MINI — TRỢ LÝ HỌC TẬP PIKE MAN + TAYLOR-MACLAURIN (n -> ∞)
 // =========================================================================
 
 (function () {
@@ -249,7 +249,7 @@
       if (type === "application/pdf" || /\.pdf$/i.test(name)) {
         if (file.size > 18 * 1024 * 1024) {
           throw new Error(
-            `File PDF "${name}" nặng quá 18MB, hãy tách nhỏ dưới 18MB để Gemini đọc ổn định nhé!`,
+            `File PDF "${name}" nặng quá 18MB, hãy tách nhỏ dưới 18MB để hệ thống đọc ổn định nhé!`,
           );
         }
         return new Promise((resolve, reject) => {
@@ -302,7 +302,7 @@
       const apiKey = this.getApiKey();
       if (!apiKey) {
         throw new Error(
-          "Pike Man chưa có Gemini API Key! Mở tab '⚙️ API Key' dán key từ Google AI Studio vào nhé.",
+          "Pike Man chưa được kích hoạt mã kết nối! Mở tab 'Cấu hình' để nhập mã kích hoạt vào nhé.",
         );
       }
 
@@ -436,8 +436,8 @@
               }
             }
 
-            console.warn(`[Pike Man] ${model} (${res.status}):`, errMsg);
-            lastErr = new Error(`[Model: ${model}] ${errMsg}`);
+            console.warn(`[Pike Man] Kênh ${i + 1} (${res.status}):`, errMsg);
+            lastErr = new Error(`[Kênh ${i + 1}] ${errMsg}`);
             const isRetryable =
               res.status === 429 ||
               res.status === 404 ||
@@ -461,7 +461,7 @@
 
           if (!text) {
             lastErr = new Error(
-              `[Model: ${model}] Gemini trả về phản hồi rỗng.`,
+              `[Kênh ${i + 1}] Hệ thống trả về phản hồi rỗng.`,
             );
             continue;
           }
@@ -471,19 +471,19 @@
         } catch (err) {
           if (err && err.name === "AbortError") {
             console.warn(
-              `[Pike Man] ${model} quá thời gian chờ (${effectiveTimeout}ms).`,
+              `[Pike Man] Kênh ${i + 1} quá thời gian chờ (${effectiveTimeout}ms).`,
             );
             overloadedUntil[model] = Date.now() + 90000;
             lastErr = new Error(
-              `[Model: ${model}] Quá thời gian chờ (${Math.round(
+              `[Kênh ${i + 1}] Quá thời gian chờ (${Math.round(
                 effectiveTimeout / 1000,
-              )}s) do server Google phản hồi chậm.`,
+              )}s) do máy chủ xử lý phản hồi chậm.`,
             );
             continue;
           }
           if (/Failed to fetch|NetworkError/i.test(err?.message || "")) {
             throw new Error(
-              "Lỗi kết nối mạng tới Google API. Kiểm tra lại Wi-Fi/mạng của bạn nhé.",
+              "Lỗi kết nối mạng tới máy chủ xử lý. Kiểm tra lại Wi-Fi/mạng của bạn nhé.",
             );
           }
           throw err;
@@ -495,10 +495,12 @@
       const rawMsg = lastErr?.message || "";
       if (/high demand|503|overloaded/i.test(rawMsg)) {
         throw new Error(
-          `${rawMsg} — Lưu ý: đây là lỗi quá tải tạm thời trên máy chủ Google. Hãy thử giảm Thinking xuống Minimal/Low hoặc chọn 'gemini-3.5-flash-lite' rồi gửi lại nhé!`,
+          `${rawMsg} — Máy chủ xử lý đang quá tải tạm thời. Hãy thử chuyển sang chế độ "Nhanh" hoặc chọn kênh xử lý khác trong tab Cấu hình rồi gửi lại nhé.`,
         );
       }
-      throw lastErr || new Error("Không thể kết nối tới các model Gemini.");
+      throw (
+        lastErr || new Error("Không thể kết nối tới máy chủ trợ lý Pike Man.")
+      );
     },
 
     parseSafeJSON(rawText) {
@@ -1343,7 +1345,14 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
   function updateHeaderModelBadge() {
     const badge = document.getElementById("pm-active-model-badge");
     if (badge) {
-      badge.textContent = `Model: ${PikeManAI.getPreferredModel()} • Thinking: ${PikeManAI.getThinkingLevel()}`;
+      const modeLabels = {
+        minimal: "Tóm tắt nhanh",
+        low: "Phản hồi nhanh",
+        medium: "Phân tích cân bằng",
+        high: "Suy luận chuyên sâu",
+      };
+      const level = PikeManAI.getThinkingLevel();
+      badge.textContent = `Giải tích 1 & ĐSTT • ${modeLabels[level] || "Phản hồi nhanh"}`;
     }
   }
 
@@ -1360,7 +1369,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
 
     panel.innerHTML = `
       <div class="pm-plan-card">
-        <div style="font-weight:700;font-size:13.5px;color:#0f172a;margin-bottom:8px;">🗓️ Lộ trình Ôn tập cùng Pike Man</div>
+        <div style="font-weight:700;font-size:13.5px;color:#0f172a;margin-bottom:8px;">Lộ trình Ôn tập cùng Pike Man</div>
         <div style="display:flex;flex-direction:column;gap:8px;font-size:12.5px;color:#0f172a;">
           <label>Môn trọng tâm:
             <select id="pm-plan-subject" class="pm-ai-field" style="margin-top:3px;">
@@ -1382,7 +1391,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
               </select>
             </label>
           </div>
-          <button type="button" class="pm-ai-btn" id="pm-generate-plan-btn" style="width:100%;">⚡ Tạo Kế hoạch Học tập</button>
+          <button type="button" class="pm-ai-btn" id="pm-generate-plan-btn" style="width:100%;">Tạo Kế hoạch Học tập</button>
         </div>
       </div>
       <div id="pm-plan-output"></div>
@@ -1392,7 +1401,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
 
     function drawPlan(planList) {
       if (!planList || !planList.length) return;
-      outputEl.innerHTML = `<div style="font-weight:700;font-size:12.5px;margin-bottom:6px;color:#0f172a;">📋 Checklist Lộ trình (Tự động lưu):</div>`;
+      outputEl.innerHTML = `<div style="font-weight:700;font-size:12.5px;margin-bottom:6px;color:#0f172a;">Danh sách Lộ trình (Tự động lưu):</div>`;
       const card = document.createElement("div");
       card.className = "pm-plan-card";
       planList.forEach((task, idx) => {
@@ -1484,7 +1493,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
     const cards = Array.from(
       document.querySelectorAll(".chapter-progress-box"),
     );
-    let html = `<div class="pm-plan-card"><div style="font-weight:700;font-size:13.5px;color:#0f172a;margin-bottom:8px;">📊 Chẩn đoán Tiến độ & Lỗ hổng</div>`;
+    let html = `<div class="pm-plan-card"><div style="font-weight:700;font-size:13.5px;color:#0f172a;margin-bottom:8px;">Chẩn đoán Tiến độ & Lỗ hổng</div>`;
     if (!cards.length) {
       html += `<div style="font-size:12.8px;color:#475569;">Mở trang <b>Chuyên đề &amp; Lab</b> để Pike Man quét tiến độ chi tiết từng chương nhé!</div>`;
     } else {
@@ -1524,7 +1533,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
     const fab = document.createElement("button");
     fab.id = "pikeman-ai-fab";
     fab.type = "button";
-    fab.innerHTML = `<span>🤖 Pike Man</span>`;
+    fab.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:#38bdf8;box-shadow:0 0 8px #38bdf8;display:inline-block;"></span><span>Pike Man</span>`;
     document.body.appendChild(fab);
 
     const drawer = document.createElement("div");
@@ -1532,40 +1541,40 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
     drawer.innerHTML = `
       <div class="pm-ai-header">
         <div>
-          <div style="font-weight:800;font-size:14.5px;">🤖 Pike Man — Trợ lý Toán &amp; Học liệu</div>
-          <div class="pm-model-badge" id="pm-active-model-badge">Model: ${PikeManAI.getPreferredModel()}</div>
+          <div style="font-weight:800;font-size:14.5px;">Pike Man — Trợ lý Toán &amp; Học liệu</div>
+          <div class="pm-model-badge" id="pm-active-model-badge">Giải tích 1 &amp; ĐSTT</div>
         </div>
-        <button id="pm-ai-close" type="button" style="background:rgba(255,255,255,0.16);border:none;color:#fff;border-radius:8px;padding:4px 9px;font-size:15px;cursor:pointer;">✕</button>
+        <button id="pm-ai-close" type="button" aria-label="Đóng khung trợ lý" style="background:rgba(255,255,255,0.16);border:none;color:#fff;border-radius:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div class="pm-ai-tabs">
-        <button type="button" class="pm-ai-tab active" data-tab="chat">💬 Hỏi AI</button>
-        <button type="button" class="pm-ai-tab" data-tab="planner">🗓️ Kế hoạch</button>
-        <button type="button" class="pm-ai-tab" data-tab="analyzer">📊 Lỗ hổng</button>
-        <button type="button" class="pm-ai-tab" data-tab="manager">📚 Bài học</button>
-        <button type="button" class="pm-ai-tab" data-tab="settings">⚙️ API Key</button>
+        <button type="button" class="pm-ai-tab active" data-tab="chat">Hỏi đáp</button>
+        <button type="button" class="pm-ai-tab" data-tab="planner">Kế hoạch</button>
+        <button type="button" class="pm-ai-tab" data-tab="analyzer">Lỗ hổng</button>
+        <button type="button" class="pm-ai-tab" data-tab="manager">Bài học</button>
+        <button type="button" class="pm-ai-tab" data-tab="settings">Cấu hình</button>
       </div>
 
       <!-- TAB 1: CHAT GIA SƯ PIKE MAN -->
       <div class="pm-ai-panel active" id="pm-panel-chat">
         <div class="pm-quick-bar">
-          <span>🧠 Thinking Level:</span>
-          <select id="pm-chat-thinking" class="pm-mini-select" title="Chọn mức độ suy nghĩ của Gemini">
-            <option value="minimal">Minimal (Siêu nhanh)</option>
-            <option value="low">Low (Nhanh — Mặc định)</option>
-            <option value="medium">Medium (Cân bằng)</option>
-            <option value="high">High (Chuyên sâu)</option>
+          <span>Mức độ giải thích:</span>
+          <select id="pm-chat-thinking" class="pm-mini-select" title="Chọn độ sâu phân tích lời giải">
+            <option value="minimal">Tóm tắt nhanh</option>
+            <option value="low">Nhanh (Mặc định)</option>
+            <option value="medium">Cân bằng</option>
+            <option value="high">Chi tiết chuyên sâu</option>
           </select>
         </div>
         <div id="pm-chat-feed" style="display:flex;flex-direction:column;gap:8px;flex:1;overflow-y:auto;">
           <div class="pm-ai-msg bot">
-            Chào Hoàng! Mình là <b>Pike Man</b> (chạy <b>gemini-3.8-flash</b> miễn phí, đọc được ảnh chụp bài làm). Cần giảng bài <b>Giải tích 1</b> / <b>ĐSTT</b> hoặc <b>chụp ảnh bài viết tay để chấm tự luận</b> thì bấm nút 📷 bên dưới hoặc dán ảnh (<code>Ctrl+V</code>) nhé!
+            Chào Hoàng! Mình là <b>Pike Man</b>, trợ lý học tập môn <b>Giải tích 1</b> &amp; <b>ĐSTT</b> của MathLab Mini (hỗ trợ đọc ảnh chụp bài làm). Cần giảng bài hoặc <b>gửi ảnh bài viết tay để chấm tự luận</b> thì chọn ảnh ở góc dưới hoặc dán ảnh (<code>Ctrl+V</code>) nhé.
           </div>
         </div>
         <div id="pm-context-pill" class="pm-context-pill" style="display:none;"></div>
         <div id="pm-image-preview" class="pm-preview-strip" style="display:none;"></div>
         <div class="pm-ai-input-bar">
           <input type="file" id="pm-chat-file" accept="image/*" multiple style="display:none;" />
-          <button type="button" class="pm-img-btn" id="pm-chat-attach" title="Chụp hoặc tải ảnh bài làm">📷</button>
+          <button type="button" class="pm-img-btn" id="pm-chat-attach" title="Chụp hoặc tải ảnh bài làm" aria-label="Đính kèm ảnh bài làm"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
           <textarea id="pm-chat-input" rows="2" placeholder="Hỏi toán, dán ảnh (Ctrl+V) hoặc gửi ảnh bài làm cần chấm..."></textarea>
           <button type="button" class="pm-ai-btn" id="pm-chat-send">Gửi</button>
         </div>
@@ -1580,20 +1589,20 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
       <!-- TAB 4: QUẢN LÝ BÀI HỌC THÔNG MINH -->
       <div class="pm-ai-panel" id="pm-panel-manager">
         <div style="background:#eff6ff;padding:11px;border-radius:12px;border:1px solid #bfdbfe;">
-          <div style="font-weight:800;font-size:13.2px;color:#1e3a8a;margin-bottom:4px;">📥 1. AI Đọc Tài Liệu Đóng Góp &amp; Nâng Cấp Kho Đề</div>
-          <div style="font-size:11.8px;color:#334155;margin-bottom:8px;">Tải lên <b>PDF đề thi/giáo trình, Ảnh chụp đề, file .txt/.md</b> hoặc dán trực tiếp câu hỏi. AI sẽ tự phân loại chương, giải chi tiết chuẩn KaTeX và nạp vào ngân hàng bài tập.</div>
+          <div style="font-weight:800;font-size:13.2px;color:#1e3a8a;margin-bottom:4px;">1. Nạp Tài Liệu Đóng Góp &amp; Nâng Cấp Kho Đề</div>
+          <div style="font-size:11.8px;color:#334155;margin-bottom:8px;">Tải lên <b>PDF đề thi/giáo trình, Ảnh chụp đề, file .txt/.md</b> hoặc dán trực tiếp câu hỏi. Hệ thống tự phân loại chương, giải chi tiết chuẩn KaTeX và nạp vào ngân hàng bài tập.</div>
           <input id="pm-contrib-source" class="pm-ai-field" placeholder="Tên nguồn đóng góp (VD: Đề thi GK1 HCMUE 2025)" style="margin-bottom:6px;" />
           <select id="pm-contrib-topic" class="pm-ai-field" style="margin-bottom:6px;">
-            <option value="auto">🤖 Để AI tự nhận diện &amp; phân loại đúng chương</option>
+            <option value="auto">Tự động nhận diện &amp; phân loại đúng chương</option>
           </select>
           <input type="file" id="pm-contrib-files" class="pm-ai-field" accept=".pdf,image/*,.txt,.md,.tex" multiple style="margin-bottom:6px;padding:6px;" />
           <textarea id="pm-contrib-text" class="pm-ai-field" rows="3" placeholder="Hoặc dán trực tiếp nội dung đề bài / ghi chú đóng góp tại đây..."></textarea>
-          <button type="button" class="pm-ai-btn" id="pm-btn-ingest-contrib" style="width:100%;margin-top:6px;">🚀 AI Phân Tích &amp; Trích Xuất Học Liệu</button>
+          <button type="button" class="pm-ai-btn" id="pm-btn-ingest-contrib" style="width:100%;margin-top:6px;">Phân Tích &amp; Trích Xuất Học Liệu</button>
           <div id="pm-contrib-preview" style="margin-top:8px;"></div>
         </div>
 
         <div style="background:#f8fafc;padding:10px;border-radius:12px;border:1px solid #e2e8f0;">
-          <div style="font-weight:700;font-size:13px;margin-bottom:6px;">➕ 2. Tạo Chương / Chuyên đề mới bằng Pike Man</div>
+          <div style="font-weight:700;font-size:13px;margin-bottom:6px;">2. Tạo Chương / Chuyên đề mới cùng Pike Man</div>
           <select id="pm-new-subject" class="pm-ai-field" style="margin-bottom:6px;">
             <option value="Giải tích 1">Giải tích 1</option>
             <option value="Đại số tuyến tính">Đại số tuyến tính</option>
@@ -1602,11 +1611,11 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
           </select>
           <input id="pm-new-title" class="pm-ai-field" placeholder="VD: Chương 8: Phương trình vi phân cấp 1" style="margin-bottom:6px;" />
           <textarea id="pm-new-notes" class="pm-ai-field" rows="2" placeholder="Ghi chú trọng tâm (VD: tách biến, tuyến tính, Bernoulli...)"></textarea>
-          <button type="button" class="pm-ai-btn" id="pm-btn-create-chapter" style="width:100%;margin-top:6px;">✨ Biên soạn &amp; Lưu vào Web</button>
+          <button type="button" class="pm-ai-btn" id="pm-btn-create-chapter" style="width:100%;margin-top:6px;">Biên soạn &amp; Lưu vào Web</button>
         </div>
 
         <div style="background:#f8fafc;padding:10px;border-radius:12px;border:1px solid #e2e8f0;">
-          <div style="font-weight:700;font-size:13px;margin-bottom:6px;">⚡ 3. Bổ sung nội dung cho Chương có sẵn</div>
+          <div style="font-weight:700;font-size:13px;margin-bottom:6px;">3. Bổ sung nội dung cho Chương có sẵn</div>
           <select id="pm-target-topic" class="pm-ai-field" style="margin-bottom:8px;"></select>
           <div style="display:flex;gap:6px;">
             <button type="button" class="pm-ai-btn secondary" id="pm-btn-add-ex" style="flex:1;">+3 Bài tự luận</button>
@@ -1615,40 +1624,40 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
         </div>
 
         <div style="background:#fffbeb;padding:10px;border-radius:12px;border:1px solid #fde68a;">
-          <div style="font-weight:700;font-size:13px;margin-bottom:4px;">💾 4. Xuất code JS chuẩn KaTeX cho GitHub Pages</div>
-          <div style="font-size:12px;color:#78350f;margin-bottom:6px;">Copy đoạn code JS của các câu AI vừa nạp từ tài liệu đóng góp để dán vĩnh viễn vào <code>data-gt1.js</code> / <code>data-dstt.js</code>.</div>
+          <div style="font-weight:700;font-size:13px;margin-bottom:4px;">4. Xuất mã JS chuẩn KaTeX</div>
+          <div style="font-size:12px;color:#78350f;margin-bottom:6px;">Copy đoạn code JS của các câu vừa nạp từ tài liệu đóng góp để dán vĩnh viễn vào <code>data-gt1.js</code> / <code>data-dstt.js</code>.</div>
           <div style="display:flex;gap:6px;">
-            <button type="button" class="pm-ai-btn outline" id="pm-btn-copy-contrib-js" style="flex:1;">📋 Copy code đóng góp</button>
-            <button type="button" class="pm-ai-btn outline" id="pm-btn-export-data" style="flex:1;">⬇️ Tải data.js</button>
+            <button type="button" class="pm-ai-btn outline" id="pm-btn-copy-contrib-js" style="flex:1;">Copy code đóng góp</button>
+            <button type="button" class="pm-ai-btn outline" id="pm-btn-export-data" style="flex:1;">Tải data.js</button>
           </div>
         </div>
 
         <div id="pm-manager-status" style="font-size:12.5px;font-weight:600;color:#0f766e;"></div>
       </div>
 
-      <!-- TAB 5: CÀI ĐẶT API KEY & MÔ HÌNH CAO -->
+      <!-- TAB 5: CÀI ĐẶT KẾT NỐI & ĐỘNG CƠ XỬ LÝ -->
       <div class="pm-ai-panel" id="pm-panel-settings">
         <div style="font-size:13px;line-height:1.5;">
-          Dán <b>Gemini API Key</b> từ Google AI Studio (<code>aistudio.google.com</code>). Key này tự động đồng bộ cho cả Pike Man và Phòng Thi Chấm Ảnh AI.
+          Nhập <b>Mã kết nối (Access Key)</b> để kích hoạt trợ lý Pike Man và tính năng chấm ảnh bài làm trong Phòng Thi.
         </div>
-        <label style="font-size:12.5px;font-weight:700;">Gemini API Key:</label>
-        <input id="pm-api-key-input" type="password" class="pm-ai-field" placeholder="AIzaSy..." />
-        <label style="font-size:12.5px;font-weight:700;">Mô hình Gemini (Khóa cố định):</label>
+        <label style="font-size:12.5px;font-weight:700;">Mã kết nối:</label>
+        <input id="pm-api-key-input" type="password" class="pm-ai-field" placeholder="Nhập mã kết nối cá nhân..." />
+        <label style="font-size:12.5px;font-weight:700;">Động cơ xử lý:</label>
         <select id="pm-model-select" class="pm-ai-field">
-          <option value="gemini-3.8-flash">gemini-3.8-flash (Khuyên dùng — Miễn phí, thông minh nhất dòng Flash)</option>
-          <option value="gemini-3.6-flash">gemini-3.6-flash (Miễn phí — Ổn định, ít nghẽn hơn giờ cao điểm)</option>
-          <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Miễn phí — Nhanh, hạn mức lượt gọi/ngày rất cao)</option>
-          <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (Miễn phí — Tốc độ cao, nhẹ)</option>
-          <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (Miễn phí — Dự phòng ổn định)</option>
-          <option value="gemini-4-hydrogen">gemini-4-hydrogen (Gemini 4 Free Tier trên AI Studio)</option>
+          <option value="gemini-3.8-flash">Pike-Core v3.8 (Khuyên dùng — Thông minh &amp; cân bằng)</option>
+          <option value="gemini-3.6-flash">Pike-Core v3.6 (Ổn định — Ít nghẽn giờ cao điểm)</option>
+          <option value="gemini-3.5-flash-lite">Pike-Lite v3.5 (Tốc độ cao — Hạn mức lượt dùng lớn)</option>
+          <option value="gemini-3.1-flash-lite">Pike-Lite v3.1 (Nhẹ &amp; phản hồi nhanh)</option>
+          <option value="gemini-2.5-flash-lite">Pike-Lite v2.5 (Dự phòng ổn định)</option>
+          <option value="gemini-4-hydrogen">Pike-Core v4 (Thử nghiệm thế hệ mới)</option>
         </select>
-        <input id="pm-custom-model-input" class="pm-ai-field" placeholder="Hoặc nhập tên model tùy chọn (để trống nếu dùng ô trên)" />
-        <label style="font-size:12.5px;font-weight:700;">Mức độ suy nghĩ mặc định (Thinking Level):</label>
+        <input id="pm-custom-model-input" class="pm-ai-field" placeholder="Hoặc nhập mã engine tùy chỉnh (để trống nếu dùng ô trên)" />
+        <label style="font-size:12.5px;font-weight:700;">Mức độ phân tích mặc định:</label>
         <select id="pm-thinking-select" class="pm-ai-field">
-          <option value="minimal">Minimal — Siêu nhanh (Flash / Flash-Lite)</option>
-          <option value="low">Low — Nhanh, cân bằng cho chấm ảnh (Khuyên dùng)</option>
-          <option value="medium">Medium — Suy luận kỹ cho bài toán khó</option>
-          <option value="high">High — Chuyên sâu cho chứng minh dài (chậm hơn)</option>
+          <option value="minimal">Tóm tắt — Phản hồi siêu nhanh</option>
+          <option value="low">Nhanh — Cân bằng cho chấm ảnh (Khuyên dùng)</option>
+          <option value="medium">Cân bằng — Suy luận kỹ cho bài toán khó</option>
+          <option value="high">Chuyên sâu — Chứng minh dài và chi tiết</option>
         </select>
         <div style="display:flex;gap:8px;margin-top:4px;">
           <button type="button" class="pm-ai-btn" id="pm-save-key" style="flex:1;">Lưu cấu hình</button>
@@ -1669,7 +1678,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
       if (sel) sel.innerHTML = optionsHtml;
       if (contribSel) {
         contribSel.innerHTML =
-          `<option value="auto">🤖 Để AI tự nhận diện &amp; phân loại đúng chương</option>` +
+          `<option value="auto">Tự động nhận diện &amp; phân loại đúng chương</option>` +
           optionsHtml;
       }
     };
@@ -1746,7 +1755,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
       applySettings();
       const st = document.getElementById("pm-settings-status");
       st.style.color = "#059669";
-      st.textContent = `✅ Đã lưu API Key & khóa cứng mô hình: ${PikeManAI.getPreferredModel()}!`;
+      st.textContent = "Đã lưu cấu hình kết nối cho Pike Man.";
     });
 
     document
@@ -1754,17 +1763,18 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
       .addEventListener("click", async () => {
         const st = document.getElementById("pm-settings-status");
         st.style.color = "#2563eb";
-        st.textContent = "⏳ Đang kiểm tra kết nối với mô hình đã chọn...";
+        st.textContent = "Đang kiểm tra kết nối máy chủ xử lý...";
         try {
           applySettings();
-          const { modelUsed } = await PikeManAI.generate({
+          await PikeManAI.generate({
             prompt: "Trả lời ngắn gọn 1 câu: Pike Man đã sẵn sàng!",
           });
           st.style.color = "#059669";
-          st.textContent = `✅ Kết nối thành công! Đang chạy cố định: ${modelUsed}`;
+          st.textContent =
+            "Kết nối thành công! Pike Man đã sẵn sàng hoạt động.";
         } catch (err) {
           st.style.color = "#dc2626";
-          st.textContent = `❌ ${err.message}`;
+          st.textContent = err.message;
         }
       });
 
@@ -1784,7 +1794,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
       pendingImages.forEach((img, idx) => {
         const box = document.createElement("div");
         box.className = "pm-preview-thumb";
-        box.innerHTML = `<img src="${img.dataUrl}" alt="Ảnh bài làm" /><button type="button" class="pm-preview-remove" title="Xóa ảnh">✕</button>`;
+        box.innerHTML = `<img src="${img.dataUrl}" alt="Ảnh bài làm" /><button type="button" class="pm-preview-remove" title="Xóa ảnh">&times;</button>`;
         box
           .querySelector(".pm-preview-remove")
           .addEventListener("click", () => {
@@ -1807,7 +1817,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
         pendingProblemContext.replace(/\s+/g, " ").slice(0, 75) +
         (pendingProblemContext.length > 75 ? "..." : "");
       pill.style.display = "flex";
-      pill.innerHTML = `<span>📝 Đang chấm bài: <i>${shortTitle.replace(/</g, "&lt;")}</i></span><button type="button" id="pm-clear-ctx" style="border:none;background:transparent;color:#1e40af;font-weight:800;cursor:pointer;">✕</button>`;
+      pill.innerHTML = `<span>Đang chấm bài: <i>${shortTitle.replace(/</g, "&lt;")}</i></span><button type="button" id="pm-clear-ctx" style="border:none;background:transparent;color:#1e40af;font-weight:800;cursor:pointer;">&times;</button>`;
       pill.querySelector("#pm-clear-ctx").addEventListener("click", () => {
         pendingProblemContext = "";
         renderContextBanner();
@@ -1872,7 +1882,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
         );
         if (offlineMatch) {
           appendMsg(
-            `<div style="font-weight:700;color:#1d4ed8;margin-bottom:4px;">📌 ${offlineMatch.title} (Tra cứu nhanh Offline)</div>${offlineMatch.answer}<div style="margin-top:8px;font-size:12px;color:#64748b;">💡 Dán Gemini API Key ở tab <b>⚙️ API Key</b> để Pike Man giải &amp; chấm ảnh bài làm chi tiết từng bước!</div>`,
+            `<div style="font-weight:700;color:#1d4ed8;margin-bottom:4px;">${offlineMatch.title} (Tra cứu nhanh Offline)</div>${offlineMatch.answer}<div style="margin-top:8px;font-size:12px;color:#64748b;">Mở tab <b>Cấu hình</b> để nhập mã kết nối nếu muốn Pike Man giải và chấm ảnh bài làm chi tiết từng bước.</div>`,
             "bot",
             true,
           );
@@ -1881,7 +1891,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
       }
 
       const loadingDiv = appendMsg(
-        `⏳ Pike Man (${PikeManAI.getPreferredModel()}) đang ${
+        `Pike Man đang ${
           images.length ? "đọc ảnh bài làm & chấm điểm" : "phân tích"
         }...`,
         "bot",
@@ -1896,25 +1906,25 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
         : "";
 
       try {
-        const { text, modelUsed } = await PikeManAI.generate({
+        const { text } = await PikeManAI.generate({
           prompt: promptText,
           images,
-          systemInstruction: `Bạn là Pike Man — trợ lý gia sư Toán Cao Cấp (Giải tích 1 & Đại số tuyến tính chuẩn HCMUE) trên nền tảng MathLab Mini. Người dùng đang xem: "${pageContext}". Hãy giải thích chặt chẽ từng bước, kiểm chứng kỹ mọi phép biến đổi, chỉ rõ bẫy mất điểm khi thi tự luận và luôn bọc công thức bằng $...$ hoặc $$...$$.${gradingAddon}`,
-          onStatus: (activeModel, idx) => {
+          systemInstruction: `Bạn là Pike Man — trợ lý gia sư Toán Cao Cấp (Giải tích 1 & Đại số tuyến tính chuẩn HCMUE) tích hợp trên nền tảng MathLab Mini. Người dùng đang xem: "${pageContext}". Hãy giải thích chặt chẽ từng bước, kiểm chứng kỹ mọi phép biến đổi, chỉ rõ bẫy mất điểm khi thi tự luận và luôn bọc công thức bằng $...$ hoặc $$...$$. QUY TẮC DANH TÍNH: Tuyệt đối KHÔNG tự nhận là Gemini, Google hay tiết lộ tên mô hình kỹ thuật nào; nếu được hỏi bạn là AI gì hay dùng công nghệ gì, chỉ trả lời ngắn gọn bạn là trợ lý học tập Pike Man được tích hợp cho MathLab Mini.${gradingAddon}`,
+          onStatus: (_activeModel, idx) => {
             loadingDiv.innerHTML =
               idx === 0
-                ? `⏳ Pike Man (<code>${activeModel}</code>) đang ${
+                ? `Pike Man đang ${
                     images.length ? "đọc ảnh bài làm & chấm điểm" : "phân tích"
                   }...`
-                : `⏳ Model trước đang bận/hết lượt, tự động chuyển sang <code>${activeModel}</code>...`;
+                : `Kênh xử lý đang bận, tự động chuyển sang kênh dự phòng...`;
           },
         });
-        loadingDiv.innerHTML =
-          formatMarkdownLite(normalizeLatexDelimiters(text)) +
-          `<div style="margin-top:8px;font-size:11px;color:#64748b;">⚡ Model: <code>${modelUsed}</code> • Thinking: <code>${PikeManAI.getThinkingLevel()}</code></div>`;
+        loadingDiv.innerHTML = formatMarkdownLite(
+          normalizeLatexDelimiters(text),
+        );
         renderMathIfAvailable(loadingDiv);
       } catch (err) {
-        loadingDiv.innerHTML = `<span style="color:#dc2626;">❌ ${err.message}</span>`;
+        loadingDiv.innerHTML = `<span style="color:#dc2626;">${err.message}</span>`;
       }
     };
     window.askMathLabGemini = window.askPikeMan;
@@ -1990,8 +2000,8 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
       const shortDisplay = val
         ? val
         : ctx
-          ? "📝 Chấm ảnh bài làm theo đề bài đã chọn"
-          : "📷 Xem và chấm/giải ảnh đính kèm";
+          ? "Chấm ảnh bài làm theo đề bài đã chọn"
+          : "Xem và chấm/giải ảnh đính kèm";
 
       window.askPikeMan(fullPrompt, {
         images: imgsToSend,
@@ -2017,13 +2027,13 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
         const title = document.getElementById("pm-new-title").value.trim();
         if (!title) {
           status.style.color = "#dc2626";
-          status.textContent = "⚠️ Vui lòng nhập tên chương trước!";
+          status.textContent = "Vui lòng nhập tên chương trước.";
           return;
         }
         btn.disabled = true;
         status.style.color = "#2563eb";
         status.textContent =
-          "⏳ Pike Man đang biên soạn lý thuyết, bài tập & quiz...";
+          "Pike Man đang biên soạn lý thuyết, bài tập & quiz...";
         try {
           const ch = await PikeManAI.createNewChapter({
             subject: document.getElementById("pm-new-subject").value,
@@ -2032,10 +2042,10 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
           });
           refreshTopicDropdown();
           status.style.color = "#059669";
-          status.textContent = `✅ Đã tạo xong "${ch.title}" và cập nhật lên danh sách chương!`;
+          status.textContent = `Đã tạo xong "${ch.title}" và cập nhật lên danh sách chương.`;
         } catch (err) {
           status.style.color = "#dc2626";
-          status.textContent = `❌ ${err.message}`;
+          status.textContent = err.message;
         } finally {
           btn.disabled = false;
         }
@@ -2046,14 +2056,14 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
       const topicId = document.getElementById("pm-target-topic").value;
       btn.disabled = true;
       status.style.color = "#2563eb";
-      status.textContent = "⏳ Pike Man đang soạn thêm câu hỏi mới...";
+      status.textContent = "Pike Man đang soạn thêm câu hỏi mới...";
       try {
         const msg = await PikeManAI.enrichExistingChapter(topicId, mode);
         status.style.color = "#059669";
-        status.textContent = `✅ ${msg}`;
+        status.textContent = msg;
       } catch (err) {
         status.style.color = "#dc2626";
-        status.textContent = `❌ ${err.message}`;
+        status.textContent = err.message;
       } finally {
         btn.disabled = false;
       }
@@ -2075,7 +2085,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
         const status = document.getElementById("pm-manager-status");
         if (!window.MathLabDataManager) {
           status.style.color = "#dc2626";
-          status.textContent = "⚠️ Chưa nạp MathLabDataManager trong data.js!";
+          status.textContent = "Chưa nạp MathLabDataManager trong data.js.";
           return;
         }
         const code = window.MathLabDataManager.exportJSCode();
@@ -2083,11 +2093,11 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
           await navigator.clipboard.writeText(code);
           status.style.color = "#059669";
           status.textContent =
-            "✅ Đã copy toàn bộ code JS (chuẩn KaTeX) của dữ liệu đóng góp vào Clipboard!";
+            "Đã copy toàn bộ code JS (chuẩn KaTeX) của dữ liệu đóng góp vào Clipboard.";
         } catch {
           status.style.color = "#2563eb";
           status.textContent =
-            "ℹ️ Trình duyệt chặn clipboard tự động, đã xuất log ra Console (F12).";
+            "Trình duyệt chặn clipboard tự động, đã xuất log ra Console (F12).";
           console.log(code);
         }
       });
@@ -2109,7 +2119,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
         previewBox.innerHTML = "";
         status.style.color = "#2563eb";
         status.textContent =
-          "⏳ Pike Man đang đọc tài liệu đóng góp & bóc tách câu hỏi...";
+          "Pike Man đang đọc tài liệu đóng góp & bóc tách câu hỏi...";
 
         try {
           const result = await PikeManAI.ingestContributedResource({
@@ -2117,11 +2127,11 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
             rawText,
             targetTopicId,
             sourceTitle,
-            onStatus: (mod, idx) => {
+            onStatus: (_mod, idx) => {
               status.textContent =
                 idx === 0
-                  ? `⏳ Pike Man (${mod}) đang đọc & chuẩn hóa LaTeX tài liệu...`
-                  : `⏳ Đang thử model dự phòng (${mod})...`;
+                  ? "Pike Man đang đọc & chuẩn hóa LaTeX tài liệu..."
+                  : "Kênh xử lý đang bận, đang thử kênh dự phòng...";
             },
           });
 
@@ -2141,32 +2151,32 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
           if (!flatItems.length) {
             status.style.color = "#d97706";
             status.textContent =
-              "⚠️ AI không tìm thấy câu hỏi hoặc nội dung toán học nào trong tài liệu này.";
+              "Không tìm thấy câu hỏi hoặc nội dung toán học nào trong tài liệu này.";
             return;
           }
 
           status.style.color = "#0f766e";
-          status.textContent = `✨ AI (${result.modelUsed}) đã trích xuất được ${flatItems.length} mục từ "${result.sourceTitle}". Tick chọn và bấm Duyệt!`;
+          status.textContent = `Đã trích xuất được ${flatItems.length} mục từ "${result.sourceTitle}". Chọn mục cần giữ và bấm Duyệt.`;
 
           const card = document.createElement("div");
           card.style.cssText =
             "background:#ffffff;border:1px solid #93c5fd;border-radius:10px;padding:9px;font-size:12px;";
           card.innerHTML = `
             <div style="font-weight:700;color:#1e3a8a;margin-bottom:6px;">
-              📋 Xem trước kết quả AI bóc tách (${flatItems.length} mục):
+              Xem trước kết quả bóc tách (${flatItems.length} mục):
             </div>
             <div id="pm-contrib-checklist" style="max-height:210px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
             <button type="button" id="pm-btn-approve-contrib" class="pm-ai-btn secondary" style="width:100%;">
-              ✅ Duyệt &amp; Nạp vào Ngân hàng Web
+              Duyệt &amp; Nạp vào Ngân hàng Web
             </button>
           `;
 
           const listEl = card.querySelector("#pm-contrib-checklist");
           flatItems.forEach((entry, idx) => {
             const labelMap = {
-              theory: "📘 Lý thuyết",
-              exercise: "✍️ Tự luận",
-              quiz: "🔘 Trắc nghiệm",
+              theory: "Lý thuyết",
+              exercise: "Tự luận",
+              quiz: "Trắc nghiệm",
             };
             const titleText =
               entry.kind === "theory"
@@ -2228,11 +2238,11 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
               if (fileInput) fileInput.value = "";
 
               status.style.color = "#059669";
-              status.textContent = `🎉 Đã nạp vào kho: +${summary.totalTheory} lý thuyết, +${summary.totalExercise} bài tự luận, +${summary.totalQuiz} câu quiz${summary.totalSkipped ? ` (bỏ qua ${summary.totalSkipped} câu trùng)` : ""}!`;
+              status.textContent = `Đã nạp vào kho: +${summary.totalTheory} lý thuyết, +${summary.totalExercise} bài tự luận, +${summary.totalQuiz} câu quiz${summary.totalSkipped ? ` (bỏ qua ${summary.totalSkipped} câu trùng)` : ""}.`;
             });
         } catch (err) {
           status.style.color = "#dc2626";
-          status.textContent = `❌ ${err.message}`;
+          status.textContent = err.message;
         } finally {
           btn.disabled = false;
         }
@@ -2283,9 +2293,9 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
       const bar = document.createElement("div");
       bar.className = "pm-inline-ai-bar";
       bar.innerHTML = `
-        <button type="button" class="pm-inline-chip" data-act="explain">💡 Pike Man giảng bài</button>
-        <button type="button" class="pm-inline-chip" data-act="grade">📷 Chấm bài làm</button>
-        <button type="button" class="pm-inline-chip" data-act="similar">🔄 Đẻ bài tương tự</button>
+        <button type="button" class="pm-inline-chip" data-act="explain">Hỏi Pike Man</button>
+        <button type="button" class="pm-inline-chip" data-act="grade">Chấm bài làm</button>
+        <button type="button" class="pm-inline-chip" data-act="similar">Bài tương tự</button>
       `;
 
       bar.addEventListener("click", (e) => {
@@ -2767,7 +2777,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
       <div id="taylor-visual-panel" style="padding:14px;border-radius:12px;background:var(--bg-surface-alt,#f8fafc);border:1px solid var(--border-color,#cbd5e1);">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <span style="font-size:0.82rem;font-weight:800;color:var(--primary,#2563eb);text-transform:uppercase;">
-            📐 Xấp xỉ Taylor – Maclaurin (n → ∞)
+            Xấp xỉ Taylor – Maclaurin (n → ∞)
           </span>
           <label style="display:inline-flex;align-items:center;gap:5px;font-size:0.82rem;font-weight:700;cursor:pointer;">
             <input type="checkbox" id="taylor-enable-chk" checked /> Hiển thị Tₙ(x)
@@ -3074,7 +3084,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
           <div><b>Sai số tại x = ${xTestUsed}:</b> <code>|f(${xTestUsed}) - T_${rawN}(${xTestUsed})| = ${errorHtml}</code></div>
         `;
       } catch (err) {
-        statsBox.innerHTML = `<span style="color:#dc2626;">⚠️ ${err.message}</span>`;
+        statsBox.innerHTML = `<span style="color:#dc2626;">${err.message}</span>`;
       } finally {
         isDrawingOverlay = false;
       }

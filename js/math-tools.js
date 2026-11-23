@@ -1025,7 +1025,7 @@ function initGraphLabUI() {
     slot.innerHTML = `
       <div id="taylor-visual-panel" style="margin-top:10px; padding:14px; border-radius:12px; background:var(--bg-surface-alt); border:1px solid var(--border-color);">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
-          <strong style="color:var(--primary); font-size:0.9rem;">✨ Taylor Step Scrubber Pₙ(x)</strong>
+          <strong style="color:var(--primary); font-size:0.9rem;">Taylor Step Scrubber Pₙ(x)</strong>
           <label style="display:flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:700; cursor:pointer;">
             <input type="checkbox" id="toggle-taylor-overlay" onchange="runCalculusLab()">
             <span>Bật đường cam Pₙ(x)</span>
@@ -1051,7 +1051,7 @@ function initGraphLabUI() {
               <button type="button" class="btn btn-sm btn-outline" title="Giảm bậc n (-1)" onclick="stepTaylorDegree(-1)" style="padding:4px 9px; font-family:var(--font-mono);">◀</button>
               <input type="range" id="taylor-degree" min="0" max="12" value="3" oninput="onTaylorDegreeInput(true)" style="flex:1; min-width:110px;">
               <button type="button" class="btn btn-sm btn-outline" title="Tăng bậc n (+1)" onclick="stepTaylorDegree(1)" style="padding:4px 9px; font-family:var(--font-mono);">▶</button>
-              <button type="button" class="btn btn-sm btn-secondary" id="taylor-play-btn" onclick="toggleTaylorAnimation()">▶️ Tua bậc n</button>
+              <button type="button" class="btn btn-sm btn-secondary" id="taylor-play-btn" onclick="toggleTaylorAnimation()">▶ Tua bậc n</button>
             </div>
           </div>
         </div>
@@ -1066,7 +1066,7 @@ function initGraphLabUI() {
       "margin-top:10px; padding:14px; border-radius:12px; background:var(--bg-surface-alt); border:1px solid var(--border-color);";
     riemannPanel.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
-        <strong style="color:#10b981; font-size:0.9rem;">📊 Chia Tổng Riemann &amp; Quy tắc Hình thang</strong>
+        <strong style="color:#10b981; font-size:0.9rem;">Chia Tổng Riemann &amp; Quy tắc Hình thang</strong>
         <label style="display:flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:700; cursor:pointer;">
           <input type="checkbox" id="toggle-riemann-overlay" onchange="runCalculusLab()">
           <span>Bật chia cột trên [a, b]</span>
@@ -1092,7 +1092,7 @@ function initGraphLabUI() {
             <button type="button" class="btn btn-sm btn-outline" title="Giảm N (-1)" onclick="stepRiemannN(-1)" style="padding:4px 9px; font-family:var(--font-mono);">◀</button>
             <input type="range" id="riemann-n" min="1" max="60" value="8" oninput="onRiemannInput(true, true)" style="flex:1; min-width:110px;">
             <button type="button" class="btn btn-sm btn-outline" title="Tăng N (+1)" onclick="stepRiemannN(1)" style="padding:4px 9px; font-family:var(--font-mono);">▶</button>
-            <button type="button" class="btn btn-sm btn-secondary" id="riemann-play-btn" onclick="toggleRiemannAnimation()">▶️ Chia mịn dần</button>
+            <button type="button" class="btn btn-sm btn-secondary" id="riemann-play-btn" onclick="toggleRiemannAnimation()">▶ Chia mịn dần</button>
           </div>
         </div>
       </div>
@@ -1115,7 +1115,7 @@ function onRiemannInput(autoEnable = true, stopAnim = false) {
     clearInterval(riemannAnimTimer);
     riemannAnimTimer = null;
     const btn = document.getElementById("riemann-play-btn");
-    if (btn) btn.textContent = "▶️ Chia mịn dần";
+    if (btn) btn.textContent = "▶ Chia mịn dần";
   }
   const slider = document.getElementById("riemann-n");
   const toggle = document.getElementById("toggle-riemann-overlay");
@@ -1151,13 +1151,13 @@ function toggleRiemannAnimation() {
   if (riemannAnimTimer) {
     clearInterval(riemannAnimTimer);
     riemannAnimTimer = null;
-    if (btn) btn.textContent = "▶️ Chia mịn dần";
+    if (btn) btn.textContent = "▶ Chia mịn dần";
     return;
   }
 
   if (toggle) toggle.checked = true;
   if (parseInt(slider.value, 10) >= 40) slider.value = "2";
-  if (btn) btn.textContent = "⏸️ Dừng";
+  if (btn) btn.textContent = "❚❚ Dừng";
 
   riemannAnimTimer = setInterval(() => {
     const cur = parseInt(slider.value, 10) || 2;
@@ -1166,7 +1166,7 @@ function toggleRiemannAnimation() {
     if (next > 44) {
       clearInterval(riemannAnimTimer);
       riemannAnimTimer = null;
-      if (btn) btn.textContent = "▶️ Chia mịn dần";
+      if (btn) btn.textContent = "▶ Chia mịn dần";
       return;
     }
     slider.value = String(next);
@@ -1203,13 +1203,13 @@ function toggleTaylorAnimation() {
   if (taylorAnimTimer) {
     clearInterval(taylorAnimTimer);
     taylorAnimTimer = null;
-    if (btn) btn.textContent = "▶️ Tua bậc n";
+    if (btn) btn.textContent = "▶ Tua bậc n";
     return;
   }
 
   const maxDeg = parseInt(slider.max || "12", 10);
   if (toggle) toggle.checked = true;
-  if (btn) btn.textContent = "⏸️ Dừng";
+  if (btn) btn.textContent = "❚❚ Dừng";
   taylorAnimTimer = setInterval(() => {
     let nextVal = (parseInt(slider.value, 10) + 1) % (maxDeg + 1);
     slider.value = String(nextVal);
@@ -1376,7 +1376,7 @@ function runCalculusLab() {
 
   if (compileError) {
     if (out) {
-      out.innerHTML = `<div style="color:var(--danger); font-weight:700;">⚠️ Lỗi cú pháp hàm số: <code>${compileError}</code> — Hãy kiểm tra lại dấu ngoặc hoặc ký hiệu hàm (VD: <code>ln(1+x)</code> hoặc <code>\\ln(1+x)</code>).</div>`;
+      out.innerHTML = `<div style="color:var(--danger); font-weight:700;">Lỗi cú pháp hàm số: <code>${compileError}</code> — Hãy kiểm tra lại dấu ngoặc hoặc ký hiệu hàm (VD: <code>ln(1+x)</code> hoặc <code>\\ln(1+x)</code>).</div>`;
     }
     return;
   }
@@ -1895,9 +1895,9 @@ function runCalculusLab() {
           ? `+ ${formatNum(intercept)}`
           : `- ${formatNum(Math.abs(intercept))}`;
       const domainWarn = runtimeError
-        ? `<div style="color:var(--danger); margin-bottom:6px;">⚠️ Lỗi thực thi hàm số: <code>${runtimeError}</code></div>`
+        ? `<div style="color:var(--danger); margin-bottom:6px;">Lỗi thực thi hàm số: <code>${runtimeError}</code></div>`
         : plottedCount === 0
-          ? `<div style="color:#f59e0b; margin-bottom:6px;">⚠️ Hàm số không có điểm xác định nào trong vùng nhìn hiện tại (thử bấm <strong>Về gốc O</strong> hoặc kéo khung nhìn sang miền xác định).</div>`
+          ? `<div style="color:#f59e0b; margin-bottom:6px;">Hàm số không có điểm xác định nào trong vùng nhìn hiện tại (thử bấm <strong>Về gốc O</strong> hoặc kéo khung nhìn sang miền xác định).</div>`
           : "";
       out.innerHTML = `
         ${domainWarn}
@@ -2000,7 +2000,7 @@ function on2DMorphSliderInput(val) {
     cancelAnimationFrame(mat2DStageState.animRaf);
     mat2DStageState.animRaf = null;
     const playBtn = document.getElementById("mat2d-play-btn");
-    if (playBtn) playBtn.textContent = "▶️ Biến hình";
+    if (playBtn) playBtn.textContent = "▶ Biến hình";
   }
   const pct = Math.max(0, Math.min(100, parseInt(val, 10) || 0));
   mat2DStageState.t = pct / 100;
@@ -2018,11 +2018,11 @@ function play2DMatrixMorph() {
   if (mat2DStageState.animRaf) {
     cancelAnimationFrame(mat2DStageState.animRaf);
     mat2DStageState.animRaf = null;
-    if (playBtn) playBtn.textContent = "▶️ Biến hình";
+    if (playBtn) playBtn.textContent = "▶ Biến hình";
     return;
   }
 
-  if (playBtn) playBtn.textContent = "⏸️ Dừng";
+  if (playBtn) playBtn.textContent = "❚❚ Dừng";
   const duration = 1350;
   const startTime = performance.now();
 
@@ -2039,7 +2039,7 @@ function play2DMatrixMorph() {
       mat2DStageState.animRaf = requestAnimationFrame(stepAnim);
     } else {
       mat2DStageState.animRaf = null;
-      if (playBtn) playBtn.textContent = "▶️ Biến hình";
+      if (playBtn) playBtn.textContent = "▶ Biến hình";
     }
   };
   mat2DStageState.animRaf = requestAnimationFrame(stepAnim);
@@ -2367,7 +2367,7 @@ function update2DMatrixStage(rows, cols, A) {
       "margin-bottom:14px; padding:12px; border-radius:12px; background:var(--bg-surface-alt); border:1px solid var(--border-color);";
     box.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
-        <strong style="color:var(--primary); font-size:0.9rem;">🔷 Sân khấu Biến đổi Tuyến tính &amp; Vector riêng 2D</strong>
+        <strong style="color:var(--primary); font-size:0.9rem;">Sân khấu Biến đổi Tuyến tính &amp; Vector riêng 2D</strong>
         <div style="display:flex; gap:4px; flex-wrap:wrap;">
           <button type="button" class="btn btn-sm btn-outline" style="padding:2px 7px; font-size:0.74rem;" onclick="apply2DTransformPreset('stretch')">Kéo giãn</button>
           <button type="button" class="btn btn-sm btn-outline" style="padding:2px 7px; font-size:0.74rem;" onclick="apply2DTransformPreset('rotate')">Quay 45°</button>
@@ -2378,7 +2378,7 @@ function update2DMatrixStage(rows, cols, A) {
       <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; font-size:0.8rem;">
         <span style="font-weight:700; font-family:var(--font-mono);">t = <span id="mat2d-t-label" style="color:var(--primary);">100%</span></span>
         <input type="range" id="mat2d-morph-slider" min="0" max="100" value="100" oninput="on2DMorphSliderInput(this.value)" style="flex:1; min-width:110px;">
-        <button type="button" class="btn btn-sm btn-secondary" id="mat2d-play-btn" onclick="play2DMatrixMorph()" style="padding:3px 9px;">▶️ Biến hình</button>
+        <button type="button" class="btn btn-sm btn-secondary" id="mat2d-play-btn" onclick="play2DMatrixMorph()" style="padding:3px 9px;">▶ Biến hình</button>
         <label style="display:flex; align-items:center; gap:4px; cursor:pointer;">
           <input type="checkbox" id="mat2d-show-circle" checked onchange="render2DMatrixTransformCanvas()">
           <span>Đường tròn đơn vị</span>
@@ -2445,14 +2445,14 @@ function initMatrixLabUI() {
   if (ctrlSlot && !document.getElementById("opt-mat-det")) {
     ctrlSlot.innerHTML = `
       <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;">
-        <button type="button" class="btn btn-sm btn-primary" onclick="apply2DTransformPreset('stretch')">🔷 Mẫu 2×2 (Biến hình)</button>
-        <button type="button" class="btn btn-sm btn-outline" onclick="fillMatrixPreset('sample')">📘 Mẫu giáo trình</button>
-        <button type="button" class="btn btn-sm btn-outline" onclick="fillMatrixPreset('random')">🎲 Ngẫu nhiên</button>
-        <button type="button" class="btn btn-sm btn-outline" onclick="fillMatrixPreset('identity')">🆔 Đơn vị / Bậc thang</button>
-        <button type="button" class="btn btn-sm btn-outline" onclick="fillMatrixPreset('clear')">🧹 Xóa về 0</button>
+        <button type="button" class="btn btn-sm btn-primary" onclick="apply2DTransformPreset('stretch')">Mẫu 2×2 (Biến hình)</button>
+        <button type="button" class="btn btn-sm btn-outline" onclick="fillMatrixPreset('sample')">Mẫu giáo trình</button>
+        <button type="button" class="btn btn-sm btn-outline" onclick="fillMatrixPreset('random')">Ngẫu nhiên</button>
+        <button type="button" class="btn btn-sm btn-outline" onclick="fillMatrixPreset('identity')">Đơn vị / Bậc thang</button>
+        <button type="button" class="btn btn-sm btn-outline" onclick="fillMatrixPreset('clear')">Xóa về 0</button>
       </div>
       <div style="padding:10px 12px; margin-bottom:12px; border-radius:10px; background:var(--bg-surface-alt); border:1px solid var(--border-color); font-size:0.84rem;">
-        <div style="font-weight:700; margin-bottom:6px;">⚙️ Tùy chọn kết quả hiển thị:</div>
+        <div style="font-weight:700; margin-bottom:6px;">Tùy chọn kết quả hiển thị:</div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
           <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="opt-mat-det" checked onchange="analyzeMatrix()"> Định thức det(A)</label>
           <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="opt-mat-rank" checked onchange="analyzeMatrix()"> Hạng &amp; Bậc thang REF</label>
@@ -2710,7 +2710,7 @@ function analyzeMatrix() {
 
   if (rows !== 2 || cols !== 2) {
     html =
-      `<div style="padding:7px 10px; margin-bottom:10px; border-radius:8px; background:var(--bg-body); border:1px dashed var(--border-color); font-size:0.82rem; color:var(--text-secondary);">💡 Chọn kích thước <strong>2 × 2</strong> (hoặc bấm <strong>🔷 Mẫu 2×2</strong>) để mở <em>Sân khấu Biến đổi Tuyến tính &amp; Vector riêng 2D</em> trực quan.</div>` +
+      `<div style="padding:7px 10px; margin-bottom:10px; border-radius:8px; background:var(--bg-body); border:1px dashed var(--border-color); font-size:0.82rem; color:var(--text-secondary);">Gợi ý: Chọn kích thước <strong>2 × 2</strong> (hoặc bấm <strong>Mẫu 2×2</strong>) để mở <em>Sân khấu Biến đổi Tuyến tính &amp; Vector riêng 2D</em> trực quan.</div>` +
       html;
   }
 
@@ -2820,7 +2820,7 @@ function stepGaussElim(delta) {
     clearInterval(gaussStepperState.timer);
     gaussStepperState.timer = null;
     const btn = document.getElementById("gauss-auto-btn");
-    if (btn) btn.textContent = "▶️ Tự động tua";
+    if (btn) btn.textContent = "▶ Tự động tua";
   }
   goToGaussStep(gaussStepperState.currentIdx + delta, true);
 }
@@ -2830,7 +2830,7 @@ function toggleGaussAutoPlay() {
   if (gaussStepperState.timer) {
     clearInterval(gaussStepperState.timer);
     gaussStepperState.timer = null;
-    if (btn) btn.textContent = "▶️ Tự động tua";
+    if (btn) btn.textContent = "▶ Tự động tua";
     return;
   }
 
@@ -2841,12 +2841,12 @@ function toggleGaussAutoPlay() {
     renderGaussStepView();
   }
 
-  if (btn) btn.textContent = "⏸️ Dừng tua";
+  if (btn) btn.textContent = "❚❚ Dừng tua";
   gaussStepperState.timer = setInterval(() => {
     if (gaussStepperState.currentIdx >= total) {
       clearInterval(gaussStepperState.timer);
       gaussStepperState.timer = null;
-      if (btn) btn.textContent = "▶️ Tự động tua";
+      if (btn) btn.textContent = "▶ Tự động tua";
       return;
     }
     goToGaussStep(gaussStepperState.currentIdx + 1, true);
@@ -2862,10 +2862,10 @@ function initSystemLabUI() {
   if (presetSlot && !document.getElementById("sys-presets-bar")) {
     presetSlot.innerHTML = `
       <div id="sys-presets-bar" style="display:flex; flex-wrap:wrap; gap:6px;">
-        <button type="button" class="btn btn-sm btn-outline" onclick="loadSystemPreset('unique')">✅ Nghiệm duy nhất</button>
-        <button type="button" class="btn btn-sm btn-outline" onclick="loadSystemPreset('infinite')">♾️ Vô số nghiệm</button>
-        <button type="button" class="btn btn-sm btn-outline" onclick="loadSystemPreset('inconsistent')">❌ Vô nghiệm</button>
-        <button type="button" class="btn btn-sm btn-outline" onclick="loadSystemPreset('homogeneous')">0️⃣ Thuần nhất AX = 0</button>
+        <button type="button" class="btn btn-sm btn-outline" onclick="loadSystemPreset('unique')">Nghiệm duy nhất</button>
+        <button type="button" class="btn btn-sm btn-outline" onclick="loadSystemPreset('infinite')">Vô số nghiệm</button>
+        <button type="button" class="btn btn-sm btn-outline" onclick="loadSystemPreset('inconsistent')">Vô nghiệm</button>
+        <button type="button" class="btn btn-sm btn-outline" onclick="loadSystemPreset('homogeneous')">Thuần nhất AX = 0</button>
       </div>
     `;
   }
@@ -3002,7 +3002,7 @@ function solveLinearSystem() {
       [M[row], M[maxR]] = [M[maxR], M[row]];
       snapshots.push({
         matrix: M.map((r) => [...r]),
-        opHtml: `🔀 Đổi chỗ hai hàng: <code>d<sub>${row + 1}</sub> ↔ d<sub>${maxR + 1}</sub></code> (đưa phần tử trụ lên vị trí <code>(${row + 1}, ${col + 1})</code>)`,
+        opHtml: `Đổi chỗ hai hàng: <code>d<sub>${row + 1}</sub> ↔ d<sub>${maxR + 1}</sub></code> (đưa phần tử trụ lên vị trí <code>(${row + 1}, ${col + 1})</code>)`,
         pivot: { r: row, c: col },
         targetRow: row,
       });
@@ -3012,7 +3012,7 @@ function solveLinearSystem() {
       for (let c = col; c <= n; c++) M[row][c] /= piv;
       snapshots.push({
         matrix: M.map((r) => [...r]),
-        opHtml: `➗ Chuẩn hóa phần tử trụ về 1: <code>d<sub>${row + 1}</sub> → (1 / ${formatNum(piv)}) · d<sub>${row + 1}</sub></code>`,
+        opHtml: `Chuẩn hóa phần tử trụ về 1: <code>d<sub>${row + 1}</sub> → (1 / ${formatNum(piv)}) · d<sub>${row + 1}</sub></code>`,
         pivot: { r: row, c: col },
         targetRow: row,
       });
@@ -3024,7 +3024,7 @@ function solveLinearSystem() {
       const signOp = f >= 0 ? "-" : "+";
       snapshots.push({
         matrix: M.map((rItem) => [...rItem]),
-        opHtml: `⚡ Khử cột ${col + 1}: <code>d<sub>${r + 1}</sub> → d<sub>${r + 1}</sub> ${signOp} (${formatNum(Math.abs(f))}) · d<sub>${row + 1}</sub></code>`,
+        opHtml: `Khử cột ${col + 1}: <code>d<sub>${r + 1}</sub> → d<sub>${r + 1}</sub> ${signOp} (${formatNum(Math.abs(f))}) · d<sub>${row + 1}</sub></code>`,
         pivot: { r: row, c: col },
         targetRow: r,
       });
@@ -3050,14 +3050,14 @@ function solveLinearSystem() {
   `;
 
   if (rankA < rankAb) {
-    html += `<div style="color:var(--danger); font-weight:700; margin-bottom:10px;">❌ Kết luận: Hệ VÔ NGHIỆM vì rank(A) &lt; rank([A|b]) (xuất hiện phương trình mâu thuẫn 0 = c ≠ 0).</div>`;
+    html += `<div style="color:var(--danger); font-weight:700; margin-bottom:10px;">Kết luận: Hệ VÔ NGHIỆM vì rank(A) &lt; rank([A|b]) (xuất hiện phương trình mâu thuẫn 0 = c ≠ 0).</div>`;
   } else if (rankA === n) {
     const solParts = pivotCols.map(
       (col, idx) =>
         `<code>x<sub>${col + 1}</sub> = ${formatNum(M[idx][n])}</code>`,
     );
     html += `
-      <div style="color:var(--success); font-weight:700; margin-bottom:6px;">✅ Kết luận: Hệ có NGHIỆM DUY NHẤT (rank(A) = rank([A|b]) = ${n}):</div>
+      <div style="color:var(--success); font-weight:700; margin-bottom:6px;">Kết luận: Hệ có NGHIỆM DUY NHẤT (rank(A) = rank([A|b]) = ${n}):</div>
       <div style="font-size:1.02rem; margin-bottom:10px;">${solParts.join(" &nbsp;•&nbsp; ")}</div>
     `;
 
@@ -3074,7 +3074,7 @@ function solveLinearSystem() {
           `Δ<sub>${j + 1}</sub> = ${formatNum(computeDetSquare(Aj))}`,
         );
       }
-      html += `<div style="font-size:0.85rem; padding:8px 10px; border-radius:8px; background:var(--bg-body); margin-bottom:10px;">📐 <strong>Kiểm chứng Cramer:</strong> <code>Δ = ${formatNum(delta)} ≠ 0</code> ; ${deltas.join(", ")}</div>`;
+      html += `<div style="font-size:0.85rem; padding:8px 10px; border-radius:8px; background:var(--bg-body); margin-bottom:10px;"><strong>Kiểm chứng Cramer:</strong> <code>Δ = ${formatNum(delta)} ≠ 0</code> ; ${deltas.join(", ")}</div>`;
     }
   } else {
     const freeCount = n - rankA;
@@ -3112,7 +3112,7 @@ function solveLinearSystem() {
     });
 
     html += `
-      <div style="color:#f59e0b; font-weight:700; margin-bottom:6px;">♾️ Kết luận: Hệ có VÔ SỐ NGHIỆM phụ thuộc ${freeCount} ẩn tự do (${paramNames.join(", ")} ∈ ℝ):</div>
+      <div style="color:#f59e0b; font-weight:700; margin-bottom:6px;">Kết luận: Hệ có VÔ SỐ NGHIỆM phụ thuộc ${freeCount} ẩn tự do (${paramNames.join(", ")} ∈ ℝ):</div>
       <div style="padding:10px; border-radius:8px; background:var(--bg-body); margin-bottom:10px; line-height:1.7;">
         ${formulas.join("<br>")}
       </div>
@@ -3122,16 +3122,16 @@ function solveLinearSystem() {
   html += `
     <div id="gauss-stepper-host" style="margin-top:10px; padding:12px; border-radius:12px; background:var(--bg-body); border:1px solid var(--border-color);">
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
-        <strong style="color:var(--primary); font-size:0.88rem;">🎬 Máy tua Khử Gauss–Jordan từng bước</strong>
+        <strong style="color:var(--primary); font-size:0.88rem;">Máy tua Khử Gauss–Jordan từng bước</strong>
         <span id="gauss-step-badge" style="padding:2px 8px; border-radius:6px; background:rgba(14,165,233,0.14); color:var(--primary); font-family:var(--font-mono); font-size:0.76rem; font-weight:700;"></span>
       </div>
       <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:8px;">
-        <button type="button" class="btn btn-sm btn-outline" title="Về ma trận ban đầu" onclick="goToGaussStep(0)" style="padding:3px 8px; font-family:var(--font-mono);">⏮</button>
+        <button type="button" class="btn btn-sm btn-outline" title="Về ma trận ban đầu" onclick="goToGaussStep(0)" style="padding:3px 8px; font-family:var(--font-mono);">|◀</button>
         <button type="button" class="btn btn-sm btn-outline" title="Lùi 1 bước" onclick="stepGaussElim(-1)" style="padding:3px 9px; font-family:var(--font-mono);">◀ Lùi</button>
         <input type="range" id="gauss-step-slider" min="0" max="0" value="0" oninput="goToGaussStep(this.value)" style="flex:1; min-width:90px;">
         <button type="button" class="btn btn-sm btn-outline" title="Tiến 1 bước" onclick="stepGaussElim(1)" style="padding:3px 9px; font-family:var(--font-mono);">Tiến ▶</button>
-        <button type="button" class="btn btn-sm btn-outline" title="Đến bước cuối RREF" onclick="goToGaussStep(999)" style="padding:3px 8px; font-family:var(--font-mono);">⏭</button>
-        <button type="button" class="btn btn-sm btn-secondary" id="gauss-auto-btn" onclick="toggleGaussAutoPlay()" style="padding:3px 9px;">▶️ Tự động tua</button>
+        <button type="button" class="btn btn-sm btn-outline" title="Đến bước cuối RREF" onclick="goToGaussStep(999)" style="padding:3px 8px; font-family:var(--font-mono);">▶|</button>
+        <button type="button" class="btn btn-sm btn-secondary" id="gauss-auto-btn" onclick="toggleGaussAutoPlay()" style="padding:3px 9px;">▶ Tự động tua</button>
       </div>
       <div id="gauss-step-op" style="margin-bottom:8px; padding:6px 10px; border-radius:8px; background:var(--bg-surface-alt); font-size:0.82rem;"></div>
       <div id="gauss-step-matrix" style="overflow-x:auto;"></div>

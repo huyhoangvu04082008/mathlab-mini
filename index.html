@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
-      MathLab Mini — Nền tảng Học Toán Cao Cấp &amp; Phòng Lab HCMUE
+      MathLab Mini | Nền tảng Học Toán Cao Cấp &amp; Phòng Lab HCMUE
     </title>
 
     <!-- Favicon SVG HCMUE x MathLab -->
@@ -153,8 +153,21 @@
             class="icon-btn"
             id="theme-toggle-btn"
             title="Đổi giao diện Sáng / Tối"
+            aria-label="Đổi giao diện Sáng / Tối"
           >
-            🌙
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.9"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
           </button>
           <a href="auth.html" class="btn btn-sm btn-primary" id="nav-auth-btn"
             >Đăng nhập</a
@@ -164,7 +177,21 @@
             id="hamburger-btn"
             aria-label="Mở menu"
           >
-            ☰
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
           </button>
         </div>
       </div>
@@ -175,7 +202,7 @@
       <div class="container hero-grid">
         <div>
           <div class="hero-pill">
-            🎓 Học liệu chuẩn slide Giải tích 1 &amp; Cơ sở Toán CNTT (COMP1800)
+            Học liệu chuẩn slide Giải tích 1 &amp; Cơ sở Toán CNTT (COMP1800)
           </div>
           <h1>
             Chinh phục <span class="highlight">Toán Cao Cấp</span> bằng Tư duy
@@ -183,22 +210,22 @@
           </h1>
           <p class="hero-desc">
             Tổng hợp đầy đủ 7 chương Lý thuyết chuẩn slide HCMUE, ví dụ mẫu có
-            barem từng bước, phòng thí nghiệm đồ thị – ma trận, phòng thi bấm
-            giờ giữa kỳ/cuối kỳ và AI chấm tự luận qua ảnh chụp bài viết tay.
+            barem từng bước, phòng thí nghiệm đồ thị và ma trận, phòng thi bấm
+            giờ giữa kỳ, cuối kỳ kèm trợ lý kiểm tra bài viết tay.
           </p>
           <div class="hero-cta">
             <a href="products.html" class="btn btn-primary">
-              📚 Khám phá 7 Chuyên đề
+              Khám phá 7 Chuyên đề
             </a>
             <button
               type="button"
               class="btn btn-secondary"
               onclick="openExamHubModal('midterm-1')"
             >
-              ⏱️ Phòng Thi Bấm Giờ &amp; AI Chấm Ảnh
+              Phòng Thi Bấm Giờ &amp; Chấm Bài
             </button>
             <a href="products.html#math-lab" class="btn btn-outline">
-              🧪 Phòng Lab Đồ thị &amp; Ma trận
+              Phòng Lab Đồ thị &amp; Ma trận
             </a>
           </div>
           <div class="hero-stats">
@@ -211,8 +238,8 @@
               <p>Theo chương, Giữa kỳ &amp; Cuối kỳ</p>
             </div>
             <div class="stat-item">
-              <h3>AI Vision</h3>
-              <p>Chấm bài tự luận viết tay qua ảnh</p>
+              <h3>Pike Man</h3>
+              <p>Hỗ trợ giải đáp &amp; kiểm tra bài viết tay</p>
             </div>
           </div>
         </div>
@@ -240,7 +267,7 @@
               margin-bottom: 8px;
             "
           >
-            // Khai triển Taylor – Maclaurin &amp; Khử Gauss
+            // Khai triển Taylor - Maclaurin &amp; Khử Gauss
           </div>
           <div
             style="
@@ -261,7 +288,7 @@
               class="btn btn-sm btn-primary"
               onclick="openStudyModal('gt-c1', 'lesson')"
             >
-              📖 Học thử Chương 1
+              Học thử Chương 1
             </button>
             <button
               type="button"
@@ -269,7 +296,7 @@
               style="background: #1e293b; color: #f8fafc; border-color: #334155"
               onclick="openStudyModal('dstt-c7', 'lesson')"
             >
-              📐 Học thử Chương 7
+              Học thử Chương 7
             </button>
           </div>
         </div>
@@ -339,7 +366,7 @@
               data-study-tab="lesson"
               onclick="switchStudyTab('lesson')"
             >
-              📖 Lý thuyết, Ví dụ &amp; Bài tập
+              Lý thuyết, Ví dụ &amp; Bài tập
             </button>
             <button
               type="button"
@@ -347,7 +374,7 @@
               data-study-tab="quiz"
               onclick="switchStudyTab('quiz')"
             >
-              🎯 Quiz Thích ứng &amp; XP
+              Quiz Thích ứng &amp; XP
             </button>
             <button
               type="button"
@@ -355,7 +382,7 @@
               data-study-tab="exam"
               onclick="switchStudyTab('exam')"
             >
-              ⏱️ Phòng Thi &amp; AI Chấm Ảnh
+              Phòng Thi &amp; Chấm Bài
             </button>
             <button
               type="button"
@@ -363,15 +390,29 @@
               id="study-wide-toggle-btn"
               onclick="toggleStudyWideMode()"
             >
-              🖥️ Mở rộng tối đa
+              Mở rộng tối đa
             </button>
             <button
               type="button"
               class="icon-btn"
               onclick="closeModal('study-modal')"
               title="Đóng cửa sổ (Esc)"
+              aria-label="Đóng cửa sổ"
             >
-              ✕
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
             </button>
           </div>
         </div>
@@ -384,14 +425,14 @@
             class="btn btn-sm btn-outline"
             onclick="scrollStudyModalTop()"
           >
-            ⬆️ Lên đầu trang
+            Lên đầu trang
           </button>
           <button
             type="button"
             class="btn btn-primary"
             onclick="closeModal('study-modal')"
           >
-            ✕ Đóng cửa sổ
+            Đóng cửa sổ
           </button>
         </div>
       </div>
@@ -433,7 +474,7 @@
               <div>MathLab <span>Mini</span></div>
             </a>
             <p style="font-size: 0.9rem; color: var(--text-secondary)">
-              Nền tảng hỗ trợ sinh viên Khoa Công nghệ Thông tin — Trường ĐH Sư
+              Nền tảng hỗ trợ sinh viên Khoa Công nghệ Thông tin, Trường ĐH Sư
               phạm TP.HCM học tập Giải tích 1 &amp; Đại số tuyến tính.
             </p>
           </div>
@@ -478,15 +519,15 @@
           <div>
             <h4>Nhóm thực hiện</h4>
             <ul>
-              <li><strong>Vũ Huy Hoàng</strong> — MSSV: 52.01.104.124</li>
-              <li><strong>Hồ Đắc Anh Khoa</strong> — MSSV: 52.01.104.042</li>
-              <li>Học phần: Thiết kế Web (CNTT — HCMUE)</li>
+              <li><strong>Vũ Huy Hoàng</strong> - MSSV: 52.01.104.124</li>
+              <li><strong>Hồ Đắc Anh Khoa</strong> - MSSV: 52.01.104.042</li>
+              <li>Học phần: Thiết kế Web (COMP1800)</li>
             </ul>
           </div>
         </div>
         <div class="footer-bottom">
           <span
-            >© 2026 MathLab Mini — Thực hiện bởi Vũ Huy Hoàng (52.01.104.124)
+            >© 2026 MathLab Mini. Thực hiện bởi Vũ Huy Hoàng (52.01.104.124)
             &amp; Hồ Đắc Anh Khoa (52.01.104.042).</span
           >
           <span>Khoa CNTT • Trường ĐH Sư phạm TP.HCM</span>
