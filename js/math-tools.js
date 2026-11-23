@@ -200,13 +200,21 @@ function latexToMathExpr(raw) {
   return s;
 }
 
+const _compiledFnCache = new Map();
+
 function compileMathFn(expr) {
+  const cacheKey = String(expr || "");
+  if (_compiledFnCache.has(cacheKey)) {
+    return _compiledFnCache.get(cacheKey);
+  }
+
   const clean = latexToMathExpr(expr)
-    // Hỗ trợ nhân tắt: 2x -> 2*x, 3sin(x) -> 3*sin(x), 2(x+1) -> 2*(x+1), )x -> )*x, )( -> )*(
-    .replace(/(\d)([a-zA-Z(])/g, "$1*$2")
-    .replace(/(\))([a-zA-Z0-9(])/g, "$1*$2")
+    // Hỗ trợ nhân tắt kể cả có dấu cách: 2x, 2 sin(x), (x+1)(x-1), x e^x, pi x
+    .replace(/(\d)\s*(?!(?:e[+-]?\d))([a-zA-Z(])/g, "$1*$2")
+    .replace(/(\))\s*([a-zA-Z0-9(])/g, "$1*$2")
+    .replace(/\b(pi|e|x)\s+(?=[a-zA-Z(])/gi, "$1*")
     .replace(
-      /\bx(?=(?:sin|cos|tan|cot|asin|acos|atan|sinh|cosh|tanh|ln|log|exp|sqrt|abs|\())/g,
+      /\bx\s*(?=(?:sin|cos|tan|cot|asin|acos|atan|sinh|cosh|tanh|ln|log|exp|sqrt|abs|\())/g,
       "x*",
     )
     .replace(/\^/g, "**")
@@ -232,7 +240,11 @@ function compileMathFn(expr) {
 
   const cotFn = (v) => 1 / Math.tan(v);
   const rawFn = new Function("x", "cot", `return ${clean};`);
-  return (x) => rawFn(x, cotFn);
+  const wrappedFn = (x) => rawFn(x, cotFn);
+
+  if (_compiledFnCache.size > 40) _compiledFnCache.clear();
+  _compiledFnCache.set(cacheKey, wrappedFn);
+  return wrappedFn;
 }
 
 function evalRealFn(expr, x) {
@@ -265,10 +277,16 @@ function exprToPrettyLatex(raw) {
   return s;
 }
 
+let _lastCalcPreviewRaw = null;
+
 function updateCalcLatexPreview() {
   const input = document.getElementById("calc-func");
   const preview = document.getElementById("calc-latex-preview");
   if (!input || !preview) return;
+  if (_lastCalcPreviewRaw === input.value && preview.innerHTML.trim() !== "") {
+    return;
+  }
+  _lastCalcPreviewRaw = input.value;
   const latexStr = exprToPrettyLatex(input.value);
   if (window.katex && typeof window.katex.render === "function") {
     try {
@@ -303,9 +321,17 @@ function insertCalcLatex(snippet, cursorBackOffset = 0) {
   onCalcFuncInput();
 }
 
+let _calcInputDebounceTimer = null;
+
 function onCalcFuncInput() {
   updateCalcLatexPreview();
-  runCalculusLab();
+  if (_calcInputDebounceTimer) {
+    clearTimeout(_calcInputDebounceTimer);
+  }
+  _calcInputDebounceTimer = setTimeout(() => {
+    _calcInputDebounceTimer = null;
+    runCalculusLab();
+  }, 260);
 }
 
 function formatNum(val) {
@@ -583,6 +609,17 @@ function isNearTangentHandle(px, py) {
   return dx * dx + dy * dy <= 15 * 15;
 }
 
+let _calcRafPending = false;
+
+function scheduleCalculusRender() {
+  if (_calcRafPending) return;
+  _calcRafPending = true;
+  requestAnimationFrame(() => {
+    _calcRafPending = false;
+    runCalculusLab();
+  });
+}
+
 function bindCalculusCanvasInteractions(canvas) {
   if (!canvas || canvas.dataset.ggbBound === "1") return;
   canvas.dataset.ggbBound = "1";
@@ -624,14 +661,14 @@ function bindCalculusCanvasInteractions(canvas) {
         if (x0Input) x0Input.value = String(newX0);
         calcViewport.hoverPx = px;
         calcViewport.hoverPy = py;
-        runCalculusLab();
+        scheduleCalculusRender();
       }
     } else if (calcViewport.isPanning) {
       calcViewport.offsetX =
         calcViewport.startOffsetX + (px - calcViewport.dragStartX);
       calcViewport.offsetY =
         calcViewport.startOffsetY + (py - calcViewport.dragStartY);
-      runCalculusLab();
+      scheduleCalculusRender();
     }
   });
 
@@ -649,14 +686,14 @@ function bindCalculusCanvasInteractions(canvas) {
     calcViewport.hoverPx = px;
     calcViewport.hoverPy = py;
     canvas.style.cursor = isNearTangentHandle(px, py) ? "ew-resize" : "grab";
-    runCalculusLab();
+    scheduleCalculusRender();
   });
 
   canvas.addEventListener("mouseleave", () => {
     calcViewport.hoverPx = null;
     calcViewport.hoverPy = null;
     if (!calcViewport.isPanning && !calcViewport.isDraggingX0) {
-      runCalculusLab();
+      scheduleCalculusRender();
     }
   });
 
@@ -693,14 +730,14 @@ function bindCalculusCanvasInteractions(canvas) {
           const newX0 = Math.round(((px - vp.originX) / vp.scale) * 100) / 100;
           const x0Input = document.getElementById("calc-x0");
           if (x0Input) x0Input.value = String(newX0);
-          runCalculusLab();
+          scheduleCalculusRender();
         }
       } else if (calcViewport.isPanning) {
         calcViewport.offsetX =
           calcViewport.startOffsetX + (px - calcViewport.dragStartX);
         calcViewport.offsetY =
           calcViewport.startOffsetY + (py - calcViewport.dragStartY);
-        runCalculusLab();
+        scheduleCalculusRender();
       }
     },
     { passive: false },
@@ -817,6 +854,10 @@ function setCalcPreset(expr, x0, a, b) {
 }
 
 function runCalculusLab() {
+  if (_calcInputDebounceTimer) {
+    clearTimeout(_calcInputDebounceTimer);
+    _calcInputDebounceTimer = null;
+  }
   const canvas = document.getElementById("calc-canvas");
   const out = document.getElementById("calc-output");
   if (!canvas) return;
@@ -1210,35 +1251,40 @@ function runCalculusLab() {
     }
   }
 
-  // 6. Tính tích phân xác định bằng quy tắc Simpson (n = 200, tự né cận biên suy rộng)
-  const n = 200;
-  const eps = (b - a) * 1e-6;
-  const safeA = Number.isFinite(safeEval(a)) ? a : a + eps;
-  const safeB = Number.isFinite(safeEval(b)) ? b : b - eps;
-  const step = (safeB - safeA) / n;
-  let sum = safeEval(safeA) + safeEval(safeB);
-  for (let i = 1; i < n; i++) {
-    sum += (i % 2 === 0 ? 2 : 4) * safeEval(safeA + i * step);
-  }
-  const integral = (step / 3) * sum;
+  // 6. Tính tích phân xác định bằng quy tắc Simpson (chỉ cập nhật DOM khi tham số/miền nhìn đổi)
   if (out) {
-    const intercept = y0 - slope * x0;
-    const signStr =
-      intercept >= 0
-        ? `+ ${formatNum(intercept)}`
-        : `- ${formatNum(Math.abs(intercept))}`;
-    const domainWarn = runtimeError
-      ? `<div style="color:var(--danger); margin-bottom:6px;">⚠️ Lỗi thực thi hàm số: <code>${runtimeError}</code></div>`
-      : plottedCount === 0
-        ? `<div style="color:#f59e0b; margin-bottom:6px;">⚠️ Hàm số không có điểm xác định nào trong vùng nhìn hiện tại (thử bấm <strong>Về gốc O</strong> hoặc kéo khung nhìn sang miền xác định).</div>`
-        : "";
-    out.innerHTML = `
-      ${domainWarn}
-      <div style="margin-bottom:6px;">• <strong>Giá trị hàm tại x₀ = ${x0}:</strong> <code>f(${x0}) = ${Number.isFinite(y0) ? formatNum(y0) : "Không xác định"}</code></div>
-      <div style="margin-bottom:6px;">• <strong>Đạo hàm &amp; Tiếp tuyến tại x₀:</strong> <code>f'(${x0}) ≈ ${Number.isFinite(slope) ? formatNum(slope) : "N/A"}</code> &nbsp;|&nbsp; Phương trình: <code>y = ${Number.isFinite(slope) ? formatNum(slope) + "x " + signStr : "N/A"}</code></div>
-      <div>• <strong>Tích phân xác định ∫<sub>${a}</sub><sup>${b}</sup> f(x)dx (Simpson):</strong> <code>≈ ${Number.isFinite(integral) ? integral.toFixed(5) : "Không xác định"}</code></div>
-      ${taylorInfoHtml}
-    `;
+    const outCacheKey = `${expr}|${x0}|${a}|${b}|${plottedCount > 0 ? 1 : 0}|${runtimeError || ""}|${showTaylor ? deg + "_" + preset : 0}`;
+    if (out.dataset.cacheKey !== outCacheKey) {
+      out.dataset.cacheKey = outCacheKey;
+      const n = 200;
+      const eps = (b - a) * 1e-6;
+      const safeA = Number.isFinite(safeEval(a)) ? a : a + eps;
+      const safeB = Number.isFinite(safeEval(b)) ? b : b - eps;
+      const step = (safeB - safeA) / n;
+      let sum = safeEval(safeA) + safeEval(safeB);
+      for (let i = 1; i < n; i++) {
+        sum += (i % 2 === 0 ? 2 : 4) * safeEval(safeA + i * step);
+      }
+      const integral = (step / 3) * sum;
+
+      const intercept = y0 - slope * x0;
+      const signStr =
+        intercept >= 0
+          ? `+ ${formatNum(intercept)}`
+          : `- ${formatNum(Math.abs(intercept))}`;
+      const domainWarn = runtimeError
+        ? `<div style="color:var(--danger); margin-bottom:6px;">⚠️ Lỗi thực thi hàm số: <code>${runtimeError}</code></div>`
+        : plottedCount === 0
+          ? `<div style="color:#f59e0b; margin-bottom:6px;">⚠️ Hàm số không có điểm xác định nào trong vùng nhìn hiện tại (thử bấm <strong>Về gốc O</strong> hoặc kéo khung nhìn sang miền xác định).</div>`
+          : "";
+      out.innerHTML = `
+        ${domainWarn}
+        <div style="margin-bottom:6px;">• <strong>Giá trị hàm tại x₀ = ${x0}:</strong> <code>f(${x0}) = ${Number.isFinite(y0) ? formatNum(y0) : "Không xác định"}</code></div>
+        <div style="margin-bottom:6px;">• <strong>Đạo hàm &amp; Tiếp tuyến tại x₀:</strong> <code>f'(${x0}) ≈ ${Number.isFinite(slope) ? formatNum(slope) : "N/A"}</code> &nbsp;|&nbsp; Phương trình: <code>y = ${Number.isFinite(slope) ? formatNum(slope) + "x " + signStr : "N/A"}</code></div>
+        <div>• <strong>Tích phân xác định ∫<sub>${a}</sub><sup>${b}</sup> f(x)dx (Simpson):</strong> <code>≈ ${Number.isFinite(integral) ? integral.toFixed(5) : "Không xác định"}</code></div>
+        ${taylorInfoHtml}
+      `;
+    }
   }
 
   // 7. Vẽ lớp phủ đa thức Taylor-Maclaurin (n -> ∞) trực tiếp lên frame hiện tại
@@ -2307,8 +2353,8 @@ function generateSectionExercise(topicId, secIdx) {
 }
 
 function exposeMathLabGlobals() {
-  window.evalRealFn = evalRealFn;
-  window.runCalculusLab = runCalculusLab;
+  if (!window.evalRealFn) window.evalRealFn = evalRealFn;
+  if (!window.runCalculusLab) window.runCalculusLab = runCalculusLab;
   window.setCalcPreset = setCalcPreset;
   window.onCalcFuncInput = onCalcFuncInput;
   window.onTaylorPresetChange = onTaylorPresetChange;

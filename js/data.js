@@ -839,7 +839,7 @@ const EXAM_BANK = {
 
 const AI_LESSON_BLUEPRINT = {
   universityStandard: "HCMUE — Giải tích 1 & Đại số tuyến tính (COMP1800)",
-  defaultModel: "gemini-3.8-flash",
+  defaultModel: "gemini-3.5-flash",
   supportedSubjects: [
     "Giải tích 1",
     "Đại số tuyến tính",
@@ -958,11 +958,17 @@ const MathLabDataManager = (function () {
           (qz) => normalizeText(qz.question) === normQ,
         );
         if (!exists && normQ && Array.isArray(entry.data.options)) {
+          const opts = entry.data.options.slice(0, 4);
+          const rawAns =
+            typeof entry.data.answer === "number" ? entry.data.answer : 0;
+          const safeAns = Math.min(
+            Math.max(0, rawAns),
+            Math.max(0, opts.length - 1),
+          );
           const quizObj = {
             question: entry.data.question,
-            options: entry.data.options.slice(0, 4),
-            answer:
-              typeof entry.data.answer === "number" ? entry.data.answer : 0,
+            options: opts,
+            answer: safeAns,
             explanation:
               (entry.data.explanation || "") +
               (entry.sourceTitle ? ` [Nguồn: ${entry.sourceTitle}]` : ""),
@@ -1148,13 +1154,54 @@ const MathLabDataManager = (function () {
     return out;
   }
 
+  function purgeFromRuntime(predicate) {
+    if (typeof DEFAULT_TOPICS !== "undefined") {
+      DEFAULT_TOPICS.forEach((topic) => {
+        if (Array.isArray(topic.theory)) {
+          topic.theory = topic.theory.filter(
+            (x) => !predicate(x._aiContributedId),
+          );
+        }
+        if (Array.isArray(topic.exercises)) {
+          topic.exercises = topic.exercises.filter(
+            (x) => !predicate(x._aiContributedId),
+          );
+        }
+        if (Array.isArray(topic.quiz)) {
+          topic.quiz = topic.quiz.filter((x) => !predicate(x._aiContributedId));
+        }
+      });
+    }
+    if (typeof EXAM_BANK !== "undefined") {
+      Object.values(EXAM_BANK).forEach((exam) => {
+        if (Array.isArray(exam.mcqs)) {
+          exam.mcqs = exam.mcqs.filter((x) => !predicate(x._aiContributedId));
+        }
+      });
+    }
+  }
+
   function removeItem(itemId) {
     const filtered = loadAll().filter((x) => x.id !== itemId);
     saveAll(filtered);
+    purgeFromRuntime((id) => id === itemId);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("mathlab:data-updated", {
+          detail: { removedId: itemId },
+        }),
+      );
+    }
   }
 
   function clearAll() {
     localStorage.removeItem(STORAGE_KEY);
+    purgeFromRuntime((id) => Boolean(id));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("mathlab:data-updated", { detail: { cleared: true } }),
+      );
+    }
   }
 
   function getStats() {

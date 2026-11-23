@@ -680,27 +680,43 @@
         return didMove;
       };
 
-      const isInsideScrollableBox = (target, deltaY = 0) => {
+      const OVERLAY_SELECTOR =
+        ".modal-backdrop.open, #pm-ai-drawer.open, #pikeman-ai-drawer.open, .pm-ai-drawer.open, .pikeman-ai-drawer.open, #ml-cmd-backdrop.open";
+
+      const findOpenOverlay = (target) => {
+        const startEl =
+          target && target.nodeType === 1 ? target : target?.parentElement;
+        return startEl?.closest ? startEl.closest(OVERLAY_SELECTOR) : null;
+      };
+
+      const isInsideScrollableBox = (
+        target,
+        deltaY = 0,
+        boundaryEl = document.body,
+      ) => {
         let el =
           target && target.nodeType === 1 ? target : target?.parentElement;
-        while (el && el !== document.body && el !== document.documentElement) {
-          if (
-            el.matches(
-              ".modal-backdrop.open, #pm-ai-drawer.open, #ml-cmd-backdrop.open",
-            )
-          ) {
-            return true;
-          }
+        while (
+          el &&
+          el !== boundaryEl &&
+          el !== document.body &&
+          el !== document.documentElement
+        ) {
           if (el.tagName === "TEXTAREA") {
-            if (canScrollVertically(el, deltaY)) return true;
+            if (canScrollVertically(el, deltaY)) {
+              el.style.overscrollBehavior = "contain";
+              return true;
+            }
           } else if (el.tagName === "SELECT") {
             if (
               (el.multiple || el.size > 1) &&
               canScrollVertically(el, deltaY)
             ) {
+              el.style.overscrollBehavior = "contain";
               return true;
             }
           } else if (canScrollVertically(el, deltaY)) {
+            el.style.overscrollBehavior = "contain";
             return true;
           }
           el = el.parentElement;
@@ -820,6 +836,15 @@
               : e.deltaMode === 2
                 ? e.deltaY * window.innerHeight
                 : e.deltaY;
+
+          const activeOverlay = findOpenOverlay(e.target);
+          if (activeOverlay) {
+            if (!isInsideScrollableBox(e.target, rawDelta, activeOverlay)) {
+              e.preventDefault();
+            }
+            syncFromNative();
+            return;
+          }
 
           if (isInsideScrollableBox(e.target, rawDelta)) {
             syncFromNative();
@@ -1050,16 +1075,23 @@
     window.addEventListener("resize", resizeCanvas, { passive: true });
 
     let spotRaf = false;
+    let isHoveringLab = false;
     window.addEventListener(
       "pointermove",
       (e) => {
         pointer.x = e.clientX;
         pointer.y = e.clientY;
         pointer.active = true;
+        isHoveringLab = !!e.target.closest?.(".lab-wrapper");
         if (!spotRaf) {
           spotRaf = true;
           requestAnimationFrame(() => {
             spotRaf = false;
+            if (isHoveringLab) {
+              if (spotlight.style.opacity !== "0")
+                spotlight.style.opacity = "0";
+              return;
+            }
             spotlight.style.opacity = "1";
             spotlight.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
           });
@@ -1072,19 +1104,32 @@
       "pointerleave",
       () => {
         pointer.active = false;
+        isHoveringLab = false;
         spotlight.style.opacity = "0";
       },
       { passive: true },
     );
 
-    function renderLoop() {
+    let cachedModalOpen = false;
+    let lastModalCheck = 0;
+
+    function renderLoop(now = 0) {
       requestAnimationFrame(renderLoop);
 
-      // Tạm dừng vẽ ngay khi modal đang mở để nhường 100% tài nguyên cho việc đọc bài học
-      const isAnyModalOpen = document.querySelector(
-        ".modal-backdrop.open, #study-modal.open, #topic-form-modal.open, #ml-cmd-backdrop.open",
-      );
-      if (document.hidden || width === 0 || height === 0 || isAnyModalOpen) {
+      if (now - lastModalCheck > 180) {
+        lastModalCheck = now;
+        cachedModalOpen = !!document.querySelector(
+          ".modal-backdrop.open, #study-modal.open, #topic-form-modal.open, #ml-cmd-backdrop.open",
+        );
+      }
+
+      if (
+        document.hidden ||
+        width === 0 ||
+        height === 0 ||
+        cachedModalOpen ||
+        isHoveringLab
+      ) {
         if (spotlight.style.opacity !== "0") spotlight.style.opacity = "0";
         return;
       }

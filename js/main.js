@@ -1090,6 +1090,28 @@ function markExerciseSolved(btn, topicId = activeStudyTopicId, secIdx = null) {
         localStorage.getItem("mathlab_completed_sections_v1") || "{}",
       );
       completedSections[secKey] = true;
+
+      if (typeof secIdx === "string" && secIdx.startsWith("extra-")) {
+        const extraTotal = Math.max(
+          0,
+          (topic.exercises?.length || 0) - (topic.theory?.length || 0),
+        );
+        let allExtraDone = extraTotal > 0;
+        for (let k = 0; k < extraTotal; k++) {
+          if (!completedSections[`chap_${topic.title}::extra-${k}`]) {
+            allExtraDone = false;
+            break;
+          }
+        }
+        if (allExtraDone) {
+          completedSections[`chap_${topic.title}::unit-extra`] = true;
+          const extraPill = document.querySelector(
+            `.ml-sec-pill[data-target-id="unit-extra"]`,
+          );
+          if (extraPill) extraPill.classList.add("is-done");
+        }
+      }
+
       localStorage.setItem(
         "mathlab_completed_sections_v1",
         JSON.stringify(completedSections),
@@ -1221,14 +1243,23 @@ function switchStudyTab(tab) {
       .join("");
 
     const extraExercises = topic.exercises.slice(topic.theory.length);
+    let savedExtraMap = {};
+    try {
+      savedExtraMap = JSON.parse(
+        localStorage.getItem("mathlab_completed_sections_v1") || "{}",
+      );
+    } catch (_) {}
+
     const extraHTML =
       extraExercises.length > 0
         ? `
           <div class="unit-block" id="unit-extra">
             <div class="unit-header">🏆 Bài tập tổng hợp nâng cao cuối chương</div>
             ${extraExercises
-              .map(
-                (ex, eIdx) => `
+              .map((ex, eIdx) => {
+                const isExtraDone =
+                  !!savedExtraMap[`chap_${topic.title}::extra-${eIdx}`];
+                return `
               <div class="sub-block-practice" style="margin-bottom:12px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                   <strong>Bài tổng hợp ${eIdx + 1}</strong>
@@ -1237,12 +1268,16 @@ function switchStudyTab(tab) {
                 <p style="font-weight:600; margin-bottom:10px;">${ex.question}</p>
                 <div style="display:flex; flex-wrap:wrap; gap:8px;">
                   <button type="button" class="btn btn-sm btn-outline" onclick="toggleSolution('extra-sol-${eIdx}')">👁️ Xem Barem chấm tự luận</button>
-                  <button type="button" class="btn btn-sm btn-primary" onclick="markExerciseSolved(this)">✔️ Đã tự giải xong (+15 XP)</button>
+                  ${
+                    isExtraDone
+                      ? `<button type="button" class="btn btn-sm btn-outline" disabled>✅ Đã hoàn thành (+15 XP)</button>`
+                      : `<button type="button" class="btn btn-sm btn-primary" onclick="markExerciseSolved(this, '${topic.id}', 'extra-${eIdx}')">✔️ Đã tự giải xong (+15 XP)</button>`
+                  }
                 </div>
                 <div class="solution-box" id="extra-sol-${eIdx}">${ex.solution}</div>
               </div>
-            `,
-              )
+            `;
+              })
               .join("")}
           </div>
         `

@@ -42,16 +42,13 @@
             localStorage.getItem("mathlab_theme");
           if (t === "dark" || t === "light") {
             document.documentElement.setAttribute("data-theme", t);
+            document.documentElement.style.colorScheme = t;
             document.documentElement.style.backgroundColor =
               t === "dark" ? "#070b14" : "#e6ecf5";
           }
         } catch (e) {}
       })();
     </script>
-
-    <link rel="stylesheet" href="css/style.css" />
-    <link rel="stylesheet" href="css/responsive.css" />
-    <link rel="stylesheet" href="css/mathlab-upgrade.css" />
 
     <link rel="stylesheet" href="css/style.css" />
     <link rel="stylesheet" href="css/responsive.css" />
@@ -119,7 +116,7 @@
                 y="55"
                 text-anchor="middle"
                 fill="#e0f2fe"
-                font-family="Plus Jakarta Sans, sans-serif"
+                font-family="'Be Vietnam Pro', sans-serif"
                 font-weight="800"
                 font-size="7.5"
                 letter-spacing="0.8"
@@ -342,7 +339,7 @@
               data-study-tab="lesson"
               onclick="switchStudyTab('lesson')"
             >
-              📖 Lý thuyết, Ví dụ &amp; Tổng hợp
+              📖 Lý thuyết, Ví dụ &amp; Bài tập
             </button>
             <button
               type="button"
@@ -425,7 +422,7 @@
                     y="54"
                     text-anchor="middle"
                     fill="#e0f2fe"
-                    font-family="Plus Jakarta Sans, sans-serif"
+                    font-family="'Be Vietnam Pro', sans-serif"
                     font-weight="800"
                     font-size="8"
                   >
@@ -499,7 +496,6 @@
 
     <script src="js/data-gt1.js"></script>
     <script src="js/data-dstt.js"></script>
-    <script src="js/data-trr.js"></script>
     <script src="js/data.js"></script>
     <script src="js/gemini-ai.js"></script>
     <script src="js/math-tools.js"></script>

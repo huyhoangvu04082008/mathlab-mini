@@ -2519,18 +2519,52 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
           }
           tokens.push({ type: "num", val: parsedNum });
         } else if (/[a-zA-Z]/.test(ch)) {
+          const startIdx = i;
           let id = "";
           while (i < raw.length && /[a-zA-Z0-9_]/.test(raw[i])) {
             id += raw[i++];
           }
-          if (id === "pi" || id === "PI") {
+          const lowerId = id.toLowerCase();
+          const KNOWN_FNS = new Set([
+            "sin",
+            "cos",
+            "tan",
+            "cot",
+            "ctg",
+            "exp",
+            "ln",
+            "log",
+            "sqrt",
+            "atan",
+            "arctan",
+            "asin",
+            "arcsin",
+            "acos",
+            "arccos",
+            "sinh",
+            "cosh",
+            "tanh",
+            "abs",
+          ]);
+          if (lowerId === "pi") {
             tokens.push({ type: "num", val: Math.PI });
-          } else if (id === "e") {
+          } else if (lowerId === "e") {
             tokens.push({ type: "num", val: Math.E });
-          } else if (id === "x") {
+          } else if (lowerId === "x") {
             tokens.push({ type: "var", val: "x" });
+          } else if (KNOWN_FNS.has(lowerId)) {
+            tokens.push({ type: "fn", val: lowerId });
+          } else if (lowerId.startsWith("pi") && id.length > 2) {
+            tokens.push({ type: "num", val: Math.PI });
+            i = startIdx + 2;
+          } else if (lowerId.startsWith("x") && id.length > 1) {
+            tokens.push({ type: "var", val: "x" });
+            i = startIdx + 1;
+          } else if (lowerId.startsWith("e") && id.length > 1) {
+            tokens.push({ type: "num", val: Math.E });
+            i = startIdx + 1;
           } else {
-            tokens.push({ type: "fn", val: id.toLowerCase() });
+            tokens.push({ type: "fn", val: lowerId });
           }
         } else if ("+-*/^()".includes(ch)) {
           tokens.push({ type: "op", val: ch });
@@ -2936,7 +2970,21 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
           return;
         }
 
-        const coeffs = TaylorEngine.computeJet(expr, x0, calcN);
+        if (
+          !window.__mlTaylorCache ||
+          window.__mlTaylorCache.expr !== expr ||
+          window.__mlTaylorCache.x0 !== x0 ||
+          window.__mlTaylorCache.maxN < calcN
+        ) {
+          const targetN = Math.max(calcN, 50);
+          window.__mlTaylorCache = {
+            expr,
+            x0,
+            maxN: targetN,
+            coeffs: TaylorEngine.computeJet(expr, x0, targetN),
+          };
+        }
+        const coeffs = window.__mlTaylorCache.coeffs.slice(0, calcN + 1);
         const vp = resolveViewport(canvas);
         const toPxX = (x) => vp.originX + x * vp.scaleX;
         const toPxY = (y) => vp.originY - y * vp.scaleY;
