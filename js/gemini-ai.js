@@ -1536,6 +1536,29 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
     fab.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:#38bdf8;box-shadow:0 0 8px #38bdf8;display:inline-block;"></span><span>Pike Man</span>`;
     document.body.appendChild(fab);
 
+    const resolveGreetingName = () => {
+      try {
+        const u =
+          typeof window.getCurrentUser === "function"
+            ? window.getCurrentUser()
+            : JSON.parse(
+                localStorage.getItem("mathlab_current_user_v2") || "null",
+              );
+        const fullName = (u?.name || "").trim();
+        if (fullName) {
+          return fullName.split(/\s+/).pop() || fullName;
+        }
+      } catch (_) {}
+      return "bạn";
+    };
+
+    const escapeHtmlLite = (s) =>
+      String(s || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+
     const drawer = document.createElement("div");
     drawer.id = "pikeman-ai-drawer";
     drawer.innerHTML = `
@@ -1567,7 +1590,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
         </div>
         <div id="pm-chat-feed" style="display:flex;flex-direction:column;gap:8px;flex:1;overflow-y:auto;">
           <div class="pm-ai-msg bot">
-            Chào Hoàng! Mình là <b>Pike Man</b>, trợ lý học tập môn <b>Giải tích 1</b> &amp; <b>ĐSTT</b> của MathLab Mini (hỗ trợ đọc ảnh chụp bài làm). Cần giảng bài hoặc <b>gửi ảnh bài viết tay để chấm tự luận</b> thì chọn ảnh ở góc dưới hoặc dán ảnh (<code>Ctrl+V</code>) nhé.
+            <span id="pm-greeting-target">Chào ${escapeHtmlLite(resolveGreetingName())}!</span> Mình là <b>Pike Man</b>, trợ lý học tập môn <b>Giải tích 1</b> &amp; <b>ĐSTT</b> của MathLab Mini (hỗ trợ đọc ảnh chụp bài làm). Cần giảng bài hoặc <b>gửi ảnh bài viết tay để chấm tự luận</b> thì chọn ảnh ở góc dưới hoặc dán ảnh (<code>Ctrl+V</code>) nhé.
           </div>
         </div>
         <div id="pm-context-pill" class="pm-context-pill" style="display:none;"></div>
@@ -1712,7 +1735,13 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
       syncThinkingUI(e.target.value),
     );
 
-    fab.addEventListener("click", () => drawer.classList.toggle("open"));
+    fab.addEventListener("click", () => {
+      const greetEl = document.getElementById("pm-greeting-target");
+      if (greetEl) {
+        greetEl.textContent = `Chào ${resolveGreetingName()}!`;
+      }
+      drawer.classList.toggle("open");
+    });
     document
       .getElementById("pm-ai-close")
       .addEventListener("click", () => drawer.classList.remove("open"));

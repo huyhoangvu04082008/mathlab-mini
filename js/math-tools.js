@@ -809,8 +809,11 @@ function switchCalcViewMode(mode) {
       btnCanvas.classList.remove("btn-primary");
       btnCanvas.classList.add("btn-outline");
     }
-    if (iframe && !iframe.src && iframe.dataset.src) {
-      iframe.src = iframe.dataset.src;
+    if (iframe) {
+      iframe.style.height = window.innerWidth >= 992 ? "660px" : "460px";
+      if (!iframe.src && iframe.dataset.src) {
+        iframe.src = iframe.dataset.src;
+      }
     }
   } else {
     ggbWrap.style.display = "none";
@@ -1060,6 +1063,8 @@ function initGraphLabUI() {
     `;
   }
   if (slot && !document.getElementById("riemann-visual-panel")) {
+    const initAVal = document.getElementById("calc-a")?.value ?? "0";
+    const initBVal = document.getElementById("calc-b")?.value ?? "2";
     const riemannPanel = document.createElement("div");
     riemannPanel.id = "riemann-visual-panel";
     riemannPanel.style.cssText =
@@ -1073,6 +1078,16 @@ function initGraphLabUI() {
         </label>
       </div>
       <div class="taylor-controls-stack">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div>
+            <label for="riemann-a" style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Cận dưới a:</label>
+            <input type="text" id="riemann-a" class="input-control" value="${initAVal}" placeholder="VD: 0, -pi, -2" style="width:100%; padding:7px 10px;" oninput="onRiemannBoundsInput('a', this.value)">
+          </div>
+          <div>
+            <label for="riemann-b" style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Cận trên b:</label>
+            <input type="text" id="riemann-b" class="input-control" value="${initBVal}" placeholder="VD: 2, pi, 3.14" style="width:100%; padding:7px 10px;" oninput="onRiemannBoundsInput('b', this.value)">
+          </div>
+        </div>
         <div>
           <label for="riemann-method" style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px;">Phương pháp xấp xỉ:</label>
           <select id="riemann-method" class="select-control" style="width:100%;" onchange="onRiemannInput(true, false)">
@@ -1104,6 +1119,28 @@ function initGraphLabUI() {
   if (canvas) bindCalculusCanvasInteractions(canvas);
   updateCalcLatexPreview();
   updateZoomBadge();
+  runCalculusLab();
+}
+
+function parseBoundExpr(raw) {
+  const clean = String(raw || "").trim();
+  if (!clean) return NaN;
+  const direct = Number(clean);
+  if (Number.isFinite(direct)) return direct;
+  return evalRealFn(clean, 0);
+}
+
+function onRiemannBoundsInput(which, rawVal) {
+  const targetId = which === "a" ? "calc-a" : "calc-b";
+  const mainInput = document.getElementById(targetId);
+  const toggle = document.getElementById("toggle-riemann-overlay");
+  const parsed = parseBoundExpr(rawVal);
+  if (mainInput && Number.isFinite(parsed)) {
+    mainInput.value = String(Number(parsed.toFixed(6)));
+  }
+  if (toggle && !toggle.checked) {
+    toggle.checked = true;
+  }
   runCalculusLab();
 }
 
@@ -1258,7 +1295,7 @@ function runCalculusLab() {
   const ctx = canvas.getContext("2d");
   const parentW = canvas.parentElement ? canvas.parentElement.clientWidth : 0;
   const targetW = parentW > 60 ? Math.max(300, parentW - 24) : 640;
-  const targetH = 390;
+  const targetH = window.innerWidth >= 992 ? 660 : 390;
 
   if (canvas.width !== targetW) canvas.width = targetW;
   if (canvas.height !== targetH) canvas.height = targetH;
@@ -1276,8 +1313,18 @@ function runCalculusLab() {
   const expr = document.getElementById("calc-func")?.value || "x^3 - 3*x";
   const x0Raw = parseFloat(document.getElementById("calc-x0")?.value ?? "1");
   const x0 = Number.isFinite(x0Raw) ? x0Raw : 0;
-  const aRaw = parseFloat(document.getElementById("calc-a")?.value ?? "0");
-  const bRaw = parseFloat(document.getElementById("calc-b")?.value ?? "2");
+  const calcAEl = document.getElementById("calc-a");
+  const calcBEl = document.getElementById("calc-b");
+  const riemAEl = document.getElementById("riemann-a");
+  const riemBEl = document.getElementById("riemann-b");
+  if (riemAEl && document.activeElement !== riemAEl && calcAEl) {
+    if (riemAEl.value !== calcAEl.value) riemAEl.value = calcAEl.value;
+  }
+  if (riemBEl && document.activeElement !== riemBEl && calcBEl) {
+    if (riemBEl.value !== calcBEl.value) riemBEl.value = calcBEl.value;
+  }
+  const aRaw = parseFloat(calcAEl?.value ?? "0");
+  const bRaw = parseFloat(calcBEl?.value ?? "2");
   const a = Number.isFinite(aRaw) ? aRaw : 0;
   const b = Number.isFinite(bRaw) ? bRaw : 0;
 
@@ -3750,6 +3797,7 @@ function exposeMathLabGlobals() {
   window.goToGaussStep = goToGaussStep;
   window.stepGaussElim = stepGaussElim;
   window.toggleGaussAutoPlay = toggleGaussAutoPlay;
+  window.onRiemannBoundsInput = onRiemannBoundsInput;
   window.onRiemannInput = onRiemannInput;
   window.stepRiemannN = stepRiemannN;
   window.toggleRiemannAnimation = toggleRiemannAnimation;
