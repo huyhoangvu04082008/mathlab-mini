@@ -35,6 +35,13 @@ const ADMIN_ACCOUNTS = [
     password: "khoa123",
     role: "admin",
   },
+  {
+    name: "Bùi Thiện Nhân",
+    studentId: "52.01.104.068",
+    email: "52.01.104.068@student.hcmue.edu.vn",
+    password: "nhan123",
+    role: "admin",
+  },
 ];
 
 const DEFAULT_DOCUMENTS = {
@@ -208,7 +215,10 @@ function initTheme() {
   document.documentElement.setAttribute("data-theme", savedTheme);
   const btn = document.getElementById("theme-toggle-btn");
   if (btn) {
-    btn.innerHTML = savedTheme === "dark" ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>` : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+    btn.innerHTML =
+      savedTheme === "dark"
+        ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`
+        : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
     btn.addEventListener("click", () => {
       const next =
         document.documentElement.getAttribute("data-theme") === "dark"
@@ -216,7 +226,10 @@ function initTheme() {
           : "dark";
       document.documentElement.setAttribute("data-theme", next);
       localStorage.setItem(STORAGE_KEYS.THEME, next);
-      btn.innerHTML = next === "dark" ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>` : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+      btn.innerHTML =
+        next === "dark"
+          ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`
+          : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
       if (typeof runCalculusLab === "function") runCalculusLab();
       if (typeof drawMathGraph === "function") drawMathGraph();
     });
@@ -410,10 +423,11 @@ function renderXPWidget() {
    ========================================================================== */
 function isAdminUser(user = getCurrentUser()) {
   if (!user) return false;
-  const adminMSSVs = ["52.01.104.124", "52.01.104.042"];
+  const adminMSSVs = ["52.01.104.124", "52.01.104.042", "52.01.104.068"];
   const adminEmails = [
     "52.01.104.124@student.hcmue.edu.vn",
     "52.01.104.042@student.hcmue.edu.vn",
+    "52.01.104.068@student.hcmue.edu.vn",
   ];
   return (
     user.role === "admin" ||
@@ -486,7 +500,7 @@ function renderChapterDocumentsHTML(topicId) {
         </form>
       </div>
     `
-    : `<div style="margin-top:12px; font-size:0.82rem; color:var(--text-muted);"><em>Chỉ tài khoản Admin (Vũ Huy Hoàng &amp; Hồ Đắc Anh Khoa) mới có quyền tải lên hoặc cập nhật tài liệu mới.</em></div>`;
+    : `<div style="margin-top:12px; font-size:0.82rem; color:var(--text-muted);"><em>Chỉ tài khoản Admin (Vũ Huy Hoàng, Hồ Đắc Anh Khoa &amp; Bùi Thiện Nhân) mới có quyền tải lên hoặc cập nhật tài liệu mới.</em></div>`;
 
   return `
     <div class="doc-section" id="unit-docs">
@@ -1143,7 +1157,7 @@ function markExerciseSolved(btn, topicId = activeStudyTopicId, secIdx = null) {
   // 4. Cộng XP và lưu hồ sơ người dùng
   const prog = getProgress();
   prog.solvedExercises = (prog.solvedExercises || 0) + 1;
-  saveProgress(prog);
+  localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(prog));
   addXP(15, "Hoàn thành bài tập tự luận");
 }
 
@@ -1409,7 +1423,7 @@ function submitTopicQuiz(event) {
     renderMath(expEl);
   });
 
-  saveProgress(prog);
+  localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(prog));
   addXP(
     earnedXP,
     `Hoàn thành Quiz (${correctCount}/${topic.quiz.length} câu đúng)`,
@@ -1468,6 +1482,7 @@ function renderCommunityHub() {
   const baseBoard = [
     { name: "Vũ Huy Hoàng", role: "admin", xp: 680, solved: 24 },
     { name: "Hồ Đắc Anh Khoa", role: "admin", xp: 640, solved: 22 },
+    { name: "Bùi Thiện Nhân", role: "admin", xp: 520, solved: 18 },
     { name: "Nguyễn Minh Thư", role: "student", xp: 410, solved: 15 },
     { name: "Trần Quốc Bảo", role: "student", xp: 290, solved: 11 },
     { name: "Lê Hoàng Nam", role: "student", xp: 185, solved: 7 },
@@ -1502,8 +1517,7 @@ function renderCommunityHub() {
             : rank === 3
               ? "rank-3"
               : "";
-      const medalIcon =
-        `#${rank}`;
+      const medalIcon = `#${rank}`;
       const isMe = entry.name === myName;
       const lv = getLevelInfo(entry.xp);
 
@@ -1738,7 +1752,9 @@ function handleRegister(event) {
     return;
   }
 
-  const isAdmin = ["52.01.104.124", "52.01.104.042"].includes(studentId);
+  const isAdmin = ["52.01.104.124", "52.01.104.042", "52.01.104.068"].includes(
+    studentId,
+  );
   const newUser = {
     name,
     studentId: studentId || "SV-HCMUE",
@@ -1882,8 +1898,20 @@ document.addEventListener("DOMContentLoaded", () => {
   renderXPWidget();
   renderFeaturedTopics();
   renderTopicsGrid();
+  renderCommunityHub();
   initAuthPage();
-  renderMath(document.body);
+  if (
+    !document.getElementById("topics-grid") &&
+    !document.getElementById("auth-guest-view")
+  ) {
+    const heroMath = document.querySelector(".hero-math-card");
+    if (heroMath) {
+      renderMath(heroMath);
+    } else {
+      const mainEl = document.querySelector("main");
+      if (mainEl) renderMath(mainEl);
+    }
+  }
 });
 
 /* ==========================================================================
@@ -2673,8 +2701,7 @@ async function handleCommunityContribute(event) {
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent =
-          "Đóng góp & Tự động nâng cấp học liệu (+50 XP)";
+        submitBtn.textContent = "Đóng góp & Tự động nâng cấp học liệu (+50 XP)";
       }
     }
     return;

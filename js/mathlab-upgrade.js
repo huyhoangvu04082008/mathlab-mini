@@ -716,12 +716,14 @@
 
       const canScrollVertically = (el, deltaY) => {
         if (!el || el.nodeType !== 1) return false;
+        if (el.clientHeight === 0 || el.scrollHeight <= el.clientHeight + 2) {
+          return false;
+        }
         const cs = window.getComputedStyle(el);
         const ovY = cs.overflowY;
         if (ovY !== "auto" && ovY !== "scroll" && ovY !== "overlay") {
           return false;
         }
-        if (el.scrollHeight <= el.clientHeight + 2) return false;
         if (deltaY === 0) return true;
         if (deltaY < 0) return el.scrollTop > 0;
         return el.scrollTop + el.clientHeight < el.scrollHeight - 1;
@@ -784,7 +786,6 @@
         const dt = lastTime ? Math.min((now - lastTime) / 1000, 0.025) : 0.016;
         lastTime = now;
 
-        refreshMaxScroll();
         targetY = Math.max(0, Math.min(cachedMaxScroll, targetY));
 
         const diff = targetY - currentY;
@@ -991,12 +992,25 @@
 
     scanRevealTargets();
     let revealTimer = null;
-    const domObs = new MutationObserver(() => {
+    const domObs = new MutationObserver((mutations) => {
       if (revealTimer) return;
+      const hasRelevantMutation = mutations.some((m) => {
+        const el =
+          m.target && m.target.nodeType === 1
+            ? m.target
+            : m.target?.parentElement;
+        return (
+          !el ||
+          !el.closest(
+            ".modal-backdrop, #pikeman-ai-drawer, .output-console, .katex",
+          )
+        );
+      });
+      if (!hasRelevantMutation) return;
       revealTimer = setTimeout(() => {
         revealTimer = null;
         scanRevealTargets();
-      }, 150);
+      }, 200);
     });
     domObs.observe(document.body, { childList: true, subtree: true });
   }
@@ -1088,24 +1102,45 @@
 
     let width = 0;
     let height = 0;
+    let canvasMaxScroll = 1;
     let smoothScrollP = 0;
     let lastHudStage = "";
     const pointer = { x: -9999, y: -9999, active: false };
+    let cachedIsDark =
+      document.documentElement.getAttribute("data-theme") === "dark";
+
+    let gridCount = 0;
+    let gridX = new Float32Array(0);
+    let gridY = new Float32Array(0);
+    let gridNx = new Float32Array(0);
+    let gridNy = new Float32Array(0);
+    let baseCoords = new Float32Array(0);
+    let activeCoords = new Float32Array(0);
 
     function syncSpotlightTheme() {
-      const isDark =
+      cachedIsDark =
         document.documentElement.getAttribute("data-theme") === "dark";
-      spotlight.style.mixBlendMode = isDark ? "screen" : "multiply";
-      spotlight.style.background = isDark
+      spotlight.style.mixBlendMode = cachedIsDark ? "screen" : "multiply";
+      spotlight.style.background = cachedIsDark
         ? "radial-gradient(circle, rgba(56, 189, 248, 0.24) 0%, rgba(99, 102, 241, 0.12) 45%, transparent 70%)"
         : "radial-gradient(circle, rgba(37, 99, 235, 0.13) 0%, rgba(13, 148, 136, 0.07) 45%, transparent 70%)";
     }
     syncSpotlightTheme();
 
-    const themeToggleBtn = document.getElementById("theme-toggle-btn");
-    if (themeToggleBtn) {
-      themeToggleBtn.addEventListener("click", () =>
-        setTimeout(syncSpotlightTheme, 60),
+    if (typeof MutationObserver !== "undefined") {
+      new MutationObserver(syncSpotlightTheme).observe(
+        document.documentElement,
+        {
+          attributes: true,
+          attributeFilter: ["data-theme"],
+        },
+      );
+    }
+
+    function updateCanvasMaxScroll() {
+      canvasMaxScroll = Math.max(
+        1,
+        document.documentElement.scrollHeight - window.innerHeight,
       );
     }
 
@@ -1116,25 +1151,118 @@
       canvas.width = Math.floor(width * dpr);
       canvas.height = Math.floor(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const spacing = width < 768 ? 64 : 54;
+      const cols = Math.ceil(width / spacing) + 1;
+      const rows = Math.ceil(height / spacing) + 1;
+      const offsetX = (width - (cols - 1) * spacing) * 0.5;
+      const offsetY = (height - (rows - 1) * spacing) * 0.5;
+      const cx = width * 0.5;
+      const cy = height * 0.5;
+
+      gridCount = cols * rows;
+      gridX = new Float32Array(gridCount);
+      gridY = new Float32Array(gridCount);
+      gridNx = new Float32Array(gridCount);
+      gridNy = new Float32Array(gridCount);
+      baseCoords = new Float32Array(gridCount * 4);
+      activeCoords = new Float32Array(gridCount * 4);
+
+      let idx = 0;
+      for (let r = 0; r < rows; r++) {
+        const y = offsetY + r * spacing;
+        const ny = (y - cy) / 220;
+        for (let c = 0; c < cols; c++) {
+          const x = offsetX + c * spacing;
+          gridX[idx] = x;
+          gridY[idx] = y;
+          gridNx[idx] = (x - cx) / 220;
+          gridNy[idx] = ny;
+          idx++;
+        }
+      }
+      updateCanvasMaxScroll();
     }
 
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas, { passive: true });
+    window.addEventListener("load", updateCanvasMaxScroll, { passive: true });
+    if (typeof ResizeObserver !== "undefined" && document.body) {
+      new ResizeObserver(updateCanvasMaxScroll).observe(document.body);
+    }
 
     let spotRaf = false;
     let isHoveringLab = false;
+    let cachedModalOpen = false;
+    let rafId = 0;
+    let lastFrameTime = 0;
+
+    function wakeCanvasLoop() {
+      if (
+        !rafId &&
+        !document.hidden &&
+        !cachedModalOpen &&
+        !isHoveringLab &&
+        width > 0
+      ) {
+        lastFrameTime = 0;
+        rafId = requestAnimationFrame(renderLoop);
+      }
+    }
+
+    const observedModals = new WeakSet();
+    const modalObserver = new MutationObserver(() => {
+      const nextOpen = !!document.querySelector(
+        ".modal-backdrop.open, #study-modal.open, #topic-form-modal.open, #ml-cmd-backdrop.open",
+      );
+      if (nextOpen !== cachedModalOpen) {
+        cachedModalOpen = nextOpen;
+        hud.style.opacity = cachedModalOpen ? "0" : "1";
+        if (cachedModalOpen) {
+          if (spotlight.style.opacity !== "0") spotlight.style.opacity = "0";
+        } else {
+          wakeCanvasLoop();
+        }
+      }
+    });
+
+    const attachModalObservers = () => {
+      document
+        .querySelectorAll(".modal-backdrop, #ml-cmd-backdrop")
+        .forEach((el) => {
+          if (observedModals.has(el)) return;
+          observedModals.add(el);
+          modalObserver.observe(el, {
+            attributes: true,
+            attributeFilter: ["class"],
+          });
+        });
+    };
+    attachModalObservers();
+    setTimeout(attachModalObservers, 0);
+
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) wakeCanvasLoop();
+    });
+
     window.addEventListener(
       "pointermove",
       (e) => {
         pointer.x = e.clientX;
         pointer.y = e.clientY;
         pointer.active = true;
-        isHoveringLab = !!e.target.closest?.(".lab-wrapper");
+        const nowLab = !!e.target.closest?.(".lab-wrapper");
+        if (isHoveringLab && !nowLab) {
+          isHoveringLab = false;
+          wakeCanvasLoop();
+        } else {
+          isHoveringLab = nowLab;
+        }
         if (!spotRaf) {
           spotRaf = true;
           requestAnimationFrame(() => {
             spotRaf = false;
-            if (isHoveringLab) {
+            if (isHoveringLab || cachedModalOpen) {
               if (spotlight.style.opacity !== "0")
                 spotlight.style.opacity = "0";
               return;
@@ -1151,25 +1279,17 @@
       "pointerleave",
       () => {
         pointer.active = false;
-        isHoveringLab = false;
+        if (isHoveringLab) {
+          isHoveringLab = false;
+          wakeCanvasLoop();
+        }
         spotlight.style.opacity = "0";
       },
       { passive: true },
     );
 
-    let cachedModalOpen = false;
-    let lastModalCheck = 0;
-
     function renderLoop(now = 0) {
-      requestAnimationFrame(renderLoop);
-
-      if (now - lastModalCheck > 180) {
-        lastModalCheck = now;
-        cachedModalOpen = !!document.querySelector(
-          ".modal-backdrop.open, #study-modal.open, #topic-form-modal.open, #ml-cmd-backdrop.open",
-        );
-      }
-
+      rafId = 0;
       if (
         document.hidden ||
         width === 0 ||
@@ -1182,25 +1302,32 @@
         return;
       }
 
+      const minInterval = pointer.active ? 22 : 33;
+      if (lastFrameTime && now - lastFrameTime < minInterval) {
+        rafId = requestAnimationFrame(renderLoop);
+        return;
+      }
+      const dtScale = lastFrameTime
+        ? Math.min(2.5, (now - lastFrameTime) / 16.67)
+        : 1;
+      lastFrameTime = now;
+
       hud.style.opacity = "1";
-      const maxScroll = Math.max(
-        1,
-        document.documentElement.scrollHeight - window.innerHeight,
-      );
       const targetScrollP = Math.min(
         1,
-        Math.max(0, window.scrollY / maxScroll),
+        Math.max(0, window.scrollY / canvasMaxScroll),
       );
-      smoothScrollP += (targetScrollP - smoothScrollP) * 0.08;
+      smoothScrollP +=
+        (targetScrollP - smoothScrollP) * Math.min(1, 0.08 * dtScale);
 
-      const isDark =
-        document.documentElement.getAttribute("data-theme") === "dark";
+      const isDark = cachedIsDark;
       const t = now * 0.001;
 
       ctx.clearRect(0, 0, width, height);
 
       // 1. Sóng đường đồng mức biên màn hình (chạy dọc toàn viewport, biến pha theo cú cuộn)
       const waveCount = 4;
+      const waveStep = width > 1000 ? 28 : 24;
       for (let wIdx = 0; wIdx < waveCount; wIdx++) {
         const baseY = height * (0.16 + wIdx * 0.23);
         const amp = 26 + wIdx * 7;
@@ -1217,7 +1344,7 @@
             : "rgba(13, 148, 136, 0.13)";
         ctx.lineWidth = 1.4;
         ctx.beginPath();
-        for (let px = 0; px <= width; px += 24) {
+        for (let px = 0; px <= width; px += waveStep) {
           const py =
             baseY +
             Math.sin(px * freq + phase) * amp +
@@ -1229,70 +1356,67 @@
       }
 
       // 2. Trường Vector toàn màn hình (xoáy theo chuột + biến thiên từ Gradient sang Tuyến tính)
-      const spacing = width < 768 ? 64 : 54;
-      const cols = Math.ceil(width / spacing) + 1;
-      const rows = Math.ceil(height / spacing) + 1;
-      const offsetX = (width - (cols - 1) * spacing) * 0.5;
-      const offsetY = (height - (rows - 1) * spacing) * 0.5;
-
-      const cx = width * 0.5;
-      const cy = height * 0.5;
       const blend = Math.min(1, Math.max(0, (smoothScrollP - 0.3) / 0.35));
+      const pActive = pointer.active;
+      const pX = pointer.x;
+      const pY = pointer.y;
+      let baseCount = 0;
+      let activeCount = 0;
 
-      const baseVectors = [];
-      const activeVectors = [];
+      for (let i = 0; i < gridCount; i++) {
+        const x = gridX[i];
+        const y = gridY[i];
+        const nx = gridNx[i];
+        const ny = gridNy[i];
 
-      for (let r = 0; r < rows; r++) {
-        const y = offsetY + r * spacing;
-        const ny = (y - cy) / 220;
-        for (let c = 0; c < cols; c++) {
-          const x = offsetX + c * spacing;
-          const nx = (x - cx) / 220;
+        const angGrad =
+          Math.sin(nx * 1.6 + t * 0.65 + smoothScrollP * 2.5) +
+          Math.cos(ny * 1.6 - t * 0.55);
 
-          // Góc 1: Trường sóng Gradient ∇f(x,y)
-          const angGrad =
-            Math.sin(nx * 1.6 + t * 0.65 + smoothScrollP * 2.5) +
-            Math.cos(ny * 1.6 - t * 0.55);
+        const vxLin = -0.45 * nx + 1.15 * ny;
+        const vyLin = -1.15 * nx - 0.45 * ny;
+        const angLin = Math.atan2(vyLin, vxLin) + Math.sin(t * 0.5) * 0.25;
 
-          // Góc 2: Trường biến đổi tuyến tính A·v = [-0.5x + 1.1y, -1.1x - 0.5y]
-          const vxLin = -0.45 * nx + 1.15 * ny;
-          const vyLin = -1.15 * nx - 0.45 * ny;
-          const angLin = Math.atan2(vyLin, vxLin) + Math.sin(t * 0.5) * 0.25;
+        let angle = angGrad * (1 - blend) + angLin * blend;
+        let len = 11;
+        let nearRatio = 0;
 
-          let angle = angGrad * (1 - blend) + angLin * blend;
-          let len = 11;
-          let nearRatio = 0;
-
-          // Tương tác từ trường với con trỏ chuột (bán kính 230px)
-          if (pointer.active) {
-            const dx = pointer.x - x;
-            const dy = pointer.y - y;
-            if (Math.abs(dx) < 230 && Math.abs(dy) < 230) {
-              const dist = Math.hypot(dx, dy);
-              if (dist < 230 && dist > 1) {
-                nearRatio = 1 - dist / 230;
-                const toMouse = Math.atan2(dy, dx) + Math.PI * 0.22; // xoáy nhẹ quanh trỏ chuột
-                const diff = Math.atan2(
-                  Math.sin(toMouse - angle),
-                  Math.cos(toMouse - angle),
-                );
-                angle += diff * nearRatio * 0.85;
-                len += nearRatio * 8;
-              }
+        if (pActive) {
+          const dx = pX - x;
+          const dy = pY - y;
+          if (dx > -230 && dx < 230 && dy > -230 && dy < 230) {
+            const distSq = dx * dx + dy * dy;
+            if (distSq < 52900 && distSq > 1) {
+              const dist = Math.sqrt(distSq);
+              nearRatio = 1 - dist / 230;
+              const toMouse = Math.atan2(dy, dx) + Math.PI * 0.22;
+              const diff = Math.atan2(
+                Math.sin(toMouse - angle),
+                Math.cos(toMouse - angle),
+              );
+              angle += diff * nearRatio * 0.85;
+              len += nearRatio * 8;
             }
           }
+        }
 
-          const cosA = Math.cos(angle);
-          const sinA = Math.sin(angle);
-          const item = {
-            x1: x - cosA * len * 0.5,
-            y1: y - sinA * len * 0.5,
-            x2: x + cosA * len * 0.5,
-            y2: y + sinA * len * 0.5,
-          };
+        const halfLenCos = Math.cos(angle) * len * 0.5;
+        const halfLenSin = Math.sin(angle) * len * 0.5;
+        const x1 = x - halfLenCos;
+        const y1 = y - halfLenSin;
+        const x2 = x + halfLenCos;
+        const y2 = y + halfLenSin;
 
-          if (nearRatio > 0.12) activeVectors.push(item);
-          else baseVectors.push(item);
+        if (nearRatio > 0.12) {
+          activeCoords[activeCount++] = x1;
+          activeCoords[activeCount++] = y1;
+          activeCoords[activeCount++] = x2;
+          activeCoords[activeCount++] = y2;
+        } else {
+          baseCoords[baseCount++] = x1;
+          baseCoords[baseCount++] = y1;
+          baseCoords[baseCount++] = x2;
+          baseCoords[baseCount++] = y2;
         }
       }
 
@@ -1302,24 +1426,22 @@
         : "rgba(29, 78, 216, 0.2)";
       ctx.lineWidth = 1.25;
       ctx.beginPath();
-      for (let i = 0; i < baseVectors.length; i++) {
-        const v = baseVectors[i];
-        ctx.moveTo(v.x1, v.y1);
-        ctx.lineTo(v.x2, v.y2);
+      for (let i = 0; i < baseCount; i += 4) {
+        ctx.moveTo(baseCoords[i], baseCoords[i + 1]);
+        ctx.lineTo(baseCoords[i + 2], baseCoords[i + 3]);
       }
       ctx.stroke();
 
       // Draw call 2: Các vector đang bị từ trường chuột hút/xoáy
-      if (activeVectors.length > 0) {
+      if (activeCount > 0) {
         ctx.strokeStyle = isDark
           ? "rgba(56, 189, 248, 0.78)"
           : "rgba(2, 132, 199, 0.72)";
         ctx.lineWidth = 1.9;
         ctx.beginPath();
-        for (let i = 0; i < activeVectors.length; i++) {
-          const v = activeVectors[i];
-          ctx.moveTo(v.x1, v.y1);
-          ctx.lineTo(v.x2, v.y2);
+        for (let i = 0; i < activeCount; i += 4) {
+          ctx.moveTo(activeCoords[i], activeCoords[i + 1]);
+          ctx.lineTo(activeCoords[i + 2], activeCoords[i + 3]);
         }
         ctx.stroke();
       }
@@ -1332,9 +1454,11 @@
             ? "Trường Biến đổi Tuyến tính • T(v) = Av"
             : "Trường Vector & Đường đồng mức • ∇f(x, y)";
       }
+
+      rafId = requestAnimationFrame(renderLoop);
     }
 
-    renderLoop();
+    wakeCanvasLoop();
   }
 
   /* =========================================================
@@ -1404,13 +1528,17 @@
     document.body.appendChild(dock);
 
     let dockRaf = false;
-    const syncDockState = () => {
-      dockRaf = false;
+    const syncDockVisibility = () => {
       const modalOpen = !!document.querySelector(
         ".modal-backdrop.open, #study-modal.open, #topic-form-modal.open, #ml-cmd-backdrop.open",
       );
       dock.style.opacity = modalOpen ? "0" : "1";
       dock.style.pointerEvents = modalOpen ? "none" : "auto";
+    };
+
+    const syncDockState = () => {
+      dockRaf = false;
+      syncDockVisibility();
 
       const pivot = window.innerHeight * 0.42;
       let activeIdx = 0;
@@ -1434,12 +1562,22 @@
       { passive: true },
     );
 
-    const modalObserver = new MutationObserver(syncDockState);
-    modalObserver.observe(document.body, {
-      attributes: true,
-      subtree: true,
-      attributeFilter: ["class"],
-    });
+    const observedDockModals = new WeakSet();
+    const modalObserver = new MutationObserver(syncDockVisibility);
+    const bindDockModalObservers = () => {
+      document
+        .querySelectorAll(".modal-backdrop, #ml-cmd-backdrop")
+        .forEach((el) => {
+          if (observedDockModals.has(el)) return;
+          observedDockModals.add(el);
+          modalObserver.observe(el, {
+            attributes: true,
+            attributeFilter: ["class"],
+          });
+        });
+    };
+    bindDockModalObservers();
+    setTimeout(bindDockModalObservers, 0);
     syncDockState();
   }
 
@@ -2432,6 +2570,23 @@
       });
     });
 
+    let monRafId = 0;
+    let monLastFrame = 0;
+    let monModalOpen = false;
+
+    const wakeMonitorLoop = () => {
+      if (
+        !monRafId &&
+        !document.hidden &&
+        isVisible &&
+        !monModalOpen &&
+        w > 0
+      ) {
+        monLastFrame = 0;
+        monRafId = requestAnimationFrame(loop);
+      }
+    };
+
     canvas.addEventListener(
       "pointermove",
       (e) => {
@@ -2445,6 +2600,7 @@
           1,
           Math.max(0, (e.clientY - rect.top) / rect.height),
         );
+        wakeMonitorLoop();
       },
       { passive: true },
     );
@@ -2461,11 +2617,38 @@
       const visObs = new IntersectionObserver(
         (entries) => {
           isVisible = entries[0]?.isIntersecting ?? true;
+          if (isVisible) wakeMonitorLoop();
         },
         { threshold: 0.05 },
       );
       visObs.observe(monitor);
     }
+
+    const observedMonModals = new WeakSet();
+    const monModalObs = new MutationObserver(() => {
+      monModalOpen = !!document.querySelector(
+        ".modal-backdrop.open, #study-modal.open, #topic-form-modal.open, #ml-cmd-backdrop.open",
+      );
+      if (!monModalOpen) wakeMonitorLoop();
+    });
+    const bindMonModals = () => {
+      document
+        .querySelectorAll(".modal-backdrop, #ml-cmd-backdrop")
+        .forEach((el) => {
+          if (observedMonModals.has(el)) return;
+          observedMonModals.add(el);
+          monModalObs.observe(el, {
+            attributes: true,
+            attributeFilter: ["class"],
+          });
+        });
+    };
+    bindMonModals();
+    setTimeout(bindMonModals, 0);
+
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) wakeMonitorLoop();
+    });
 
     function evalTaylorSin(x, degFloat) {
       const m = Math.floor(degFloat);
@@ -2751,17 +2934,26 @@
     }
 
     function loop(now = 0) {
-      requestAnimationFrame(loop);
-      if (document.hidden || !isVisible || w === 0) return;
+      monRafId = 0;
+      if (document.hidden || !isVisible || monModalOpen || w === 0) return;
+
+      const minStep = hover.active ? 18 : 33;
+      if (monLastFrame && now - monLastFrame < minStep) {
+        monRafId = requestAnimationFrame(loop);
+        return;
+      }
+      monLastFrame = now;
 
       const t = now * 0.001;
       ctx.clearRect(0, 0, w, h);
       if (mode === "taylor") renderTaylor(t);
       else if (mode === "eigen") renderEigen(t);
       else renderRiemann(t);
+
+      monRafId = requestAnimationFrame(loop);
     }
 
-    loop();
+    wakeMonitorLoop();
   }
 
   function initMathLabUpgrades() {

@@ -2833,70 +2833,6 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
       return Number.isFinite(num) ? num : 0;
     };
 
-    const resolveViewport = (canvas) => {
-      const W = canvas.width;
-      const H = canvas.height;
-      const vp = canvas._mathViewport;
-      if (vp) {
-        if (
-          typeof vp.scale === "number" &&
-          typeof vp.originX === "number" &&
-          typeof vp.originY === "number"
-        ) {
-          return {
-            scaleX: vp.scale,
-            scaleY: vp.scale,
-            originX: vp.originX,
-            originY: vp.originY,
-          };
-        }
-        if (
-          typeof vp.xMin === "number" &&
-          typeof vp.xMax === "number" &&
-          typeof vp.yMin === "number" &&
-          typeof vp.yMax === "number"
-        ) {
-          const scaleX = W / (vp.xMax - vp.xMin);
-          const scaleY = H / (vp.yMax - vp.yMin);
-          return {
-            scaleX,
-            scaleY,
-            originX: -vp.xMin * scaleX,
-            originY: vp.yMax * scaleY,
-          };
-        }
-      }
-      return {
-        scaleX: 40,
-        scaleY: 40,
-        originX: W / 2,
-        originY: H / 2,
-      };
-    };
-
-    let cleanBaseSnapshot = null;
-    let isDrawingOverlay = false;
-
-    const hookCalculusLab = () => {
-      if (
-        typeof window.runCalculusLab === "function" &&
-        !window.runCalculusLab._taylorHooked
-      ) {
-        const origFn = window.runCalculusLab;
-        const wrapped = function () {
-          const res = origFn.apply(this, arguments);
-          cleanBaseSnapshot = null;
-          drawTaylorOverlay(true);
-          return res;
-        };
-        wrapped._taylorHooked = true;
-        window.__origRunCalculusLab = origFn;
-        window.runCalculusLab = wrapped;
-      }
-    };
-
-    hookCalculusLab();
-
     const mainX0 = document.getElementById("calc-x0");
     let lastMainX0 = mainX0 ? mainX0.value || "0" : "0";
     if (mainX0) {
@@ -2904,18 +2840,6 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
       mainX0.addEventListener("input", () => {
         lastMainX0 = mainX0.value;
         x0Input.value = mainX0.value;
-        if (!window.runCalculusLab?._taylorHooked) {
-          triggerFullRedraw();
-        }
-      });
-    }
-
-    const calcFuncEl = document.getElementById("calc-func");
-    if (calcFuncEl) {
-      calcFuncEl.addEventListener("input", () => {
-        if (!window.runCalculusLab?._taylorHooked) {
-          triggerFullRedraw();
-        }
       });
     }
 
@@ -2931,52 +2855,45 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
       playBtn.classList.add("btn-primary");
     };
 
-    const drawTaylorOverlay = (fromBaseRender = false) => {
-      if (isDrawingOverlay) return;
-      isDrawingOverlay = true;
+    const drawTaylorOverlay = (ctx, vpInfo) => {
+      const canvas = ctx?.canvas || document.getElementById("calc-canvas");
+      const funcInput = document.getElementById("calc-func");
+      if (!canvas || !ctx || !funcInput) return;
+
+      const W = vpInfo?.width || canvas.width;
+      const H = vpInfo?.height || canvas.height;
+
       try {
-        hookCalculusLab();
-        const canvas = document.getElementById("calc-canvas");
-        const funcInput = document.getElementById("calc-func");
-        if (!canvas || !funcInput) return;
-
-        const ctx = canvas.getContext("2d");
-        const W = canvas.width;
-        const H = canvas.height;
-
-        if (
-          fromBaseRender ||
-          !cleanBaseSnapshot ||
-          cleanBaseSnapshot.width !== W ||
-          cleanBaseSnapshot.height !== H
-        ) {
-          cleanBaseSnapshot = ctx.getImageData(0, 0, W, H);
-        } else {
-          ctx.putImageData(cleanBaseSnapshot, 0, 0);
-        }
-
-        if (fromBaseRender && mainX0 && mainX0.value !== lastMainX0) {
+        if (mainX0 && mainX0.value !== lastMainX0) {
           lastMainX0 = mainX0.value;
           x0Input.value = mainX0.value || "0";
         }
 
-        const expr = funcInput.value.trim();
+        const expr = (vpInfo?.expr ?? funcInput.value).trim();
         const x0 = parseX0Value(x0Input.value);
         const x0Label = Number(x0.toFixed(4));
         const rawN = Math.max(1, Math.floor(parseFloat(nInput.value) || 1));
         const calcN = Math.min(rawN, 160);
 
         if (!enableChk.checked) {
-          statsBox.innerHTML =
-            "Đã tắt đường cong xấp xỉ Taylor $T_n(x)$. Tích vào ô phía trên để khảo sát.";
-          renderMathIfAvailable(statsBox);
+          const offKey = "off";
+          if (statsBox.dataset.statsKey !== offKey) {
+            statsBox.dataset.statsKey = offKey;
+            statsBox.innerHTML =
+              "Đã tắt đường cong xấp xỉ Taylor $T_n(x)$. Tích vào ô phía trên để khảo sát.";
+            renderMathIfAvailable(statsBox);
+          }
           return;
         }
 
         if (!expr) {
-          statsBox.innerHTML =
-            "Nhập biểu thức hàm số $f(x)$ ở khung trên để bắt đầu khai triển Taylor.";
-          renderMathIfAvailable(statsBox);
+          const emptyKey = "empty";
+          if (statsBox.dataset.statsKey !== emptyKey) {
+            statsBox.dataset.statsKey = emptyKey;
+            statsBox.innerHTML =
+              "Nhập biểu thức hàm số $f(x)$ ở khung trên để bắt đầu khai triển Taylor.";
+            renderMathIfAvailable(statsBox);
+          }
           return;
         }
 
@@ -2995,7 +2912,20 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
           };
         }
         const coeffs = window.__mlTaylorCache.coeffs.slice(0, calcN + 1);
-        const vp = resolveViewport(canvas);
+        const vp =
+          vpInfo && typeof vpInfo.scale === "number"
+            ? {
+                scaleX: vpInfo.scale,
+                scaleY: vpInfo.scale,
+                originX: vpInfo.originX,
+                originY: vpInfo.originY,
+              }
+            : {
+                scaleX: 40,
+                scaleY: 40,
+                originX: W / 2,
+                originY: H / 2,
+              };
         const toPxX = (x) => vp.originX + x * vp.scaleX;
         const toPxY = (y) => vp.originY - y * vp.scaleY;
 
@@ -3043,61 +2973,65 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
         ctx.fillText(badgeText, W - badgeW, 29);
         ctx.restore();
 
-        // Tính sai số tại điểm lân cận (tách try/catch để không sập UI nếu gặp điểm kỳ dị)
-        let errorHtml = "Không xác định tại biên kỳ dị";
-        let xTestUsed = Number((x0 + 0.25).toFixed(4));
-        const candidateOffsets = [0.25, -0.25, 0.05, -0.05];
-        for (const delta of candidateOffsets) {
-          const candidateX = Number((x0 + delta).toFixed(4));
-          try {
-            const exactVal = TaylorEngine.computeJet(expr, candidateX, 0)[0];
-            if (Number.isFinite(exactVal)) {
-              const approxVal = TaylorEngine.evalHorner(coeffs, candidateX, x0);
-              const absErr = Math.abs(exactVal - approxVal);
-              xTestUsed = candidateX;
-              errorHtml = Number.isFinite(absErr)
-                ? absErr.toExponential(3)
-                : "Phân kỳ";
-              break;
-            }
-          } catch (_) {}
-        }
+        const statsKey = `${expr}|${x0}|${rawN}`;
+        if (statsBox.dataset.statsKey !== statsKey) {
+          statsBox.dataset.statsKey = statsKey;
 
-        const terms = [];
-        for (let k = 0; k <= Math.min(calcN, 4); k++) {
-          if (Math.abs(coeffs[k]) < 1e-12) continue;
-          const cStr = Number(coeffs[k].toFixed(4));
-          if (k === 0) terms.push(`${cStr}`);
-          else if (Math.abs(x0) < 1e-12)
-            terms.push(`${cStr}x${k > 1 ? "^" + k : ""}`);
-          else terms.push(`${cStr}(x-${x0Label})${k > 1 ? "^" + k : ""}`);
-        }
-        const polyPreview =
-          (terms.join(" + ").replace(/\+\s-/g, "- ") || "0") +
-          (rawN > 4 ? " + ..." : "");
+          let errorHtml = "Không xác định tại biên kỳ dị";
+          let xTestUsed = Number((x0 + 0.25).toFixed(4));
+          const candidateOffsets = [0.25, -0.25, 0.05, -0.05];
+          for (const delta of candidateOffsets) {
+            const candidateX = Number((x0 + delta).toFixed(4));
+            try {
+              const exactVal = TaylorEngine.computeJet(expr, candidateX, 0)[0];
+              if (Number.isFinite(exactVal)) {
+                const approxVal = TaylorEngine.evalHorner(
+                  coeffs,
+                  candidateX,
+                  x0,
+                );
+                const absErr = Math.abs(exactVal - approxVal);
+                xTestUsed = candidateX;
+                errorHtml = Number.isFinite(absErr)
+                  ? absErr.toExponential(3)
+                  : "Phân kỳ";
+                break;
+              }
+            } catch (_) {}
+          }
 
-        statsBox.innerHTML = `
-          <div><b>Bậc đang khảo sát:</b> <code>n = ${rawN}</code> ${
-            rawN > 160 ? "(tính tới 160 số hạng chuẩn double)" : ""
-          }</div>
-          <div><b>Khai triển:</b> <code>T_${rawN}(x) ≈ ${polyPreview}</code></div>
-          <div><b>Sai số tại x = ${xTestUsed}:</b> <code>|f(${xTestUsed}) - T_${rawN}(${xTestUsed})| = ${errorHtml}</code></div>
-        `;
+          const terms = [];
+          for (let k = 0; k <= Math.min(calcN, 4); k++) {
+            if (Math.abs(coeffs[k]) < 1e-12) continue;
+            const cStr = Number(coeffs[k].toFixed(4));
+            if (k === 0) terms.push(`${cStr}`);
+            else if (Math.abs(x0) < 1e-12)
+              terms.push(`${cStr}x${k > 1 ? "^" + k : ""}`);
+            else terms.push(`${cStr}(x-${x0Label})${k > 1 ? "^" + k : ""}`);
+          }
+          const polyPreview =
+            (terms.join(" + ").replace(/\+\s-/g, "- ") || "0") +
+            (rawN > 4 ? " + ..." : "");
+
+          statsBox.innerHTML = `
+            <div><b>Bậc đang khảo sát:</b> <code>n = ${rawN}</code> ${
+              rawN > 160 ? "(tính tới 160 số hạng chuẩn double)" : ""
+            }</div>
+            <div><b>Khai triển:</b> <code>T_${rawN}(x) ≈ ${polyPreview}</code></div>
+            <div><b>Sai số tại x = ${xTestUsed}:</b> <code>|f(${xTestUsed}) - T_${rawN}(${xTestUsed})| = ${errorHtml}</code></div>
+          `;
+        }
       } catch (err) {
+        statsBox.dataset.statsKey = "";
         statsBox.innerHTML = `<span style="color:#dc2626;">${err.message}</span>`;
-      } finally {
-        isDrawingOverlay = false;
       }
     };
 
+    window.renderTaylorOverlay = drawTaylorOverlay;
+
     const triggerFullRedraw = () => {
-      hookCalculusLab();
-      if (typeof window.__origRunCalculusLab === "function") {
-        window.__origRunCalculusLab();
-        cleanBaseSnapshot = null;
-        drawTaylorOverlay(true);
-      } else {
-        drawTaylorOverlay(false);
+      if (typeof window.runCalculusLab === "function") {
+        window.runCalculusLab();
       }
     };
 
@@ -3107,12 +3041,12 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
         nSlider.max = String(Math.min(val, 200));
       }
       nSlider.value = String(Math.min(val, parseInt(nSlider.max, 10)));
-      drawTaylorOverlay(false);
+      triggerFullRedraw();
     });
 
     nSlider.addEventListener("input", () => {
       nInput.value = nSlider.value;
-      drawTaylorOverlay(false);
+      triggerFullRedraw();
     });
 
     x0Input.addEventListener("input", () => {
@@ -3127,14 +3061,14 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
       triggerFullRedraw();
     });
 
-    enableChk.addEventListener("change", () => drawTaylorOverlay(false));
+    enableChk.addEventListener("change", triggerFullRedraw);
 
     playBtn.addEventListener("click", () => {
       if (animTimer) {
         stopAnimation();
         return;
       }
-      playBtn.textContent = "⏸ Dừng khảo sát";
+      playBtn.textContent = "❚❚ Dừng khảo sát";
       playBtn.classList.remove("btn-primary");
       playBtn.classList.add("btn-danger");
 
@@ -3147,7 +3081,7 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
           nSlider.max = String(cur);
         }
         nSlider.value = String(Math.min(cur, parseInt(nSlider.max, 10)));
-        drawTaylorOverlay(false);
+        triggerFullRedraw();
       }, 450);
     });
 
@@ -3166,8 +3100,6 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
         triggerFullRedraw();
       });
     });
-
-    setTimeout(triggerFullRedraw, 150);
   }
 
   // -----------------------------------------------------------------------
@@ -3179,19 +3111,27 @@ const DATA_SCHEMA_VERSION = "mathlab_topics_v8_pikeman";
     setupInfiniteTaylorUI();
 
     const studyModal = document.getElementById("study-modal");
-    if (studyModal) {
-      let rafQueued = false;
-      const observer = new MutationObserver(() => {
-        if (rafQueued) return;
-        rafQueued = true;
-        requestAnimationFrame(() => {
-          rafQueued = false;
-          observer.disconnect();
-          attachInlineTutorButtons(studyModal);
-          observer.observe(studyModal, { childList: true, subtree: true });
+    const studyModalBody =
+      document.getElementById("study-modal-body") || studyModal;
+    if (studyModalBody) {
+      let attachTimer = null;
+      const observer = new MutationObserver((mutations) => {
+        const hasNewBlock = mutations.some((m) => {
+          const el =
+            m.target && m.target.nodeType === 1
+              ? m.target
+              : m.target?.parentElement;
+          return !el || !el.closest(".katex, .pm-inline-ai-bar");
         });
+        if (!hasNewBlock || attachTimer) return;
+        attachTimer = setTimeout(() => {
+          attachTimer = null;
+          observer.disconnect();
+          attachInlineTutorButtons(studyModalBody);
+          observer.observe(studyModalBody, { childList: true, subtree: true });
+        }, 80);
       });
-      observer.observe(studyModal, { childList: true, subtree: true });
+      observer.observe(studyModalBody, { childList: true, subtree: true });
     }
   });
 })();

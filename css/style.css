@@ -31,7 +31,10 @@
   --radius-lg: 20px;
   --font-sans: "Be Vietnam Pro", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", Consolas, monospace;
-  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition:
+    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease,
+    background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
 [data-theme="dark"] {
@@ -125,8 +128,7 @@ ul {
   position: sticky;
   top: 0;
   z-index: 1000;
-  background: var(--bg-glass);
-  backdrop-filter: blur(12px);
+  background: var(--bg-surface);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -397,6 +399,7 @@ ul {
   padding: 24px;
   border: 1px solid #334155;
   box-shadow: var(--shadow-lg);
+  will-change: transform;
   animation: floatSlow 5s ease-in-out infinite;
 }
 
@@ -725,8 +728,7 @@ ul {
   position: fixed;
   inset: 0;
   z-index: 2000;
-  background: rgba(15, 23, 42, 0.7);
-  backdrop-filter: blur(5px);
+  background: rgba(15, 23, 42, 0.84);
   display: none;
   align-items: center;
   justify-content: center;
@@ -1302,8 +1304,7 @@ ul {
   position: sticky;
   top: -22px;
   z-index: 20;
-  background: var(--bg-glass);
-  backdrop-filter: blur(10px);
+  background: var(--bg-surface);
   box-shadow: var(--shadow-sm);
 }
 

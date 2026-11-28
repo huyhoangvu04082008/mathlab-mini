@@ -1232,6 +1232,17 @@ function setCalcPreset(expr, x0, a, b) {
   runCalculusLab();
 }
 
+let _calcBaseCanvas = null;
+let _calcBaseKey = "";
+let _calcBaseMeta = {
+  y0: NaN,
+  slope: NaN,
+  plottedCount: 0,
+  runtimeError: null,
+  riemannApproxSum: NaN,
+  safeEval: () => NaN,
+};
+
 function runCalculusLab() {
   if (_calcInputDebounceTimer) {
     clearTimeout(_calcInputDebounceTimer);
@@ -1242,10 +1253,9 @@ function runCalculusLab() {
   if (!canvas) return;
 
   bindCalculusCanvasInteractions(canvas);
-  // Đồng bộ khung hiển thị LaTeX ngay cả khi script khác gán giá trị vào #calc-func bằng JS
   updateCalcLatexPreview();
 
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  const ctx = canvas.getContext("2d");
   const parentW = canvas.parentElement ? canvas.parentElement.clientWidth : 0;
   const targetW = parentW > 60 ? Math.max(300, parentW - 24) : 640;
   const targetH = 390;
@@ -1255,7 +1265,6 @@ function runCalculusLab() {
 
   const width = canvas.width;
   const height = canvas.height;
-  ctx.clearRect(0, 0, width, height);
 
   const scale = calcViewport.scale;
   const originX = width / 2 + calcViewport.offsetX;
@@ -1264,123 +1273,7 @@ function runCalculusLab() {
   canvas._mathViewport = { scale, originX, originY, width, height };
 
   const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-  ctx.fillStyle = isDark ? "#0f172a" : "#ffffff";
-  ctx.fillRect(0, 0, width, height);
-
-  // Lưới tọa độ thích ứng kiểu GeoGebra (lưới phụ + lưới chính)
-  const majorStep = getNiceGridStep(scale);
-  const minorStep = majorStep / 5;
-
-  const xMinWorld = -originX / scale;
-  const xMaxWorld = (width - originX) / scale;
-  const yMinWorld = (originY - height) / scale;
-  const yMaxWorld = originY / scale;
-
-  // Lưới phụ mờ
-  ctx.strokeStyle = isDark
-    ? "rgba(30, 41, 59, 0.55)"
-    : "rgba(226, 232, 240, 0.65)";
-  ctx.lineWidth = 0.8;
-  const startMinorX = Math.floor(xMinWorld / minorStep) * minorStep;
-  for (let gx = startMinorX; gx <= xMaxWorld; gx += minorStep) {
-    const px = originX + gx * scale;
-    ctx.beginPath();
-    ctx.moveTo(px, 0);
-    ctx.lineTo(px, height);
-    ctx.stroke();
-  }
-  const startMinorY = Math.floor(yMinWorld / minorStep) * minorStep;
-  for (let gy = startMinorY; gy <= yMaxWorld; gy += minorStep) {
-    const py = originY - gy * scale;
-    ctx.beginPath();
-    ctx.moveTo(0, py);
-    ctx.lineTo(width, py);
-    ctx.stroke();
-  }
-
-  // Lưới chính đậm hơn
-  ctx.strokeStyle = isDark ? "#1e293b" : "#cbd5e1";
-  ctx.lineWidth = 1.1;
-  const startMajorX = Math.floor(xMinWorld / majorStep) * majorStep;
-  for (let gx = startMajorX; gx <= xMaxWorld; gx += majorStep) {
-    const px = originX + gx * scale;
-    ctx.beginPath();
-    ctx.moveTo(px, 0);
-    ctx.lineTo(px, height);
-    ctx.stroke();
-  }
-  const startMajorY = Math.floor(yMinWorld / majorStep) * majorStep;
-  for (let gy = startMajorY; gy <= yMaxWorld; gy += majorStep) {
-    const py = originY - gy * scale;
-    ctx.beginPath();
-    ctx.moveTo(0, py);
-    ctx.lineTo(width, py);
-    ctx.stroke();
-  }
-
-  // Trục Ox, Oy
-  ctx.strokeStyle = isDark ? "#64748b" : "#334155";
-  ctx.lineWidth = 1.8;
-  ctx.beginPath();
-  if (originY >= 0 && originY <= height) {
-    ctx.moveTo(0, originY);
-    ctx.lineTo(width, originY);
-  }
-  if (originX >= 0 && originX <= width) {
-    ctx.moveTo(originX, 0);
-    ctx.lineTo(originX, height);
-  }
-  ctx.stroke();
-
-  // Nhãn số chia vạch thích ứng
-  ctx.fillStyle = isDark ? "#94a3b8" : "#475569";
-  ctx.font = "11px monospace";
-  const labelYPos = Math.min(height - 8, Math.max(14, originY + 14));
-  for (let gx = startMajorX; gx <= xMaxWorld; gx += majorStep) {
-    if (Math.abs(gx) < majorStep * 0.25) continue;
-    const px = originX + gx * scale;
-    ctx.fillText(formatTickLabel(gx), px - 6, labelYPos);
-  }
-  const labelXPos = Math.min(width - 34, Math.max(6, originX + 7));
-  for (let gy = startMajorY; gy <= yMaxWorld; gy += majorStep) {
-    if (Math.abs(gy) < majorStep * 0.25) continue;
-    const py = originY - gy * scale;
-    ctx.fillText(formatTickLabel(gy), labelXPos, py + 4);
-  }
-  if (originX >= 0 && originX <= width && originY >= 0 && originY <= height) {
-    ctx.fillText("O", originX - 13, originY + 14);
-  }
-
   const expr = document.getElementById("calc-func")?.value || "x^3 - 3*x";
-  let compiledFn = null;
-  let compileError = null;
-  let runtimeError = null;
-  try {
-    compiledFn = compileMathFn(expr);
-    // Kiểm tra thử 1 điểm để bắt sớm lỗi runtime (như biến lạ hoặc sai tên hàm)
-    compiledFn(0.5);
-  } catch (err) {
-    compileError = err.message || "Cú pháp biểu thức chưa hợp lệ";
-  }
-
-  const safeEval = (xVal) => {
-    if (!compiledFn) return NaN;
-    try {
-      const v = compiledFn(xVal);
-      return Number.isFinite(v) ? v : NaN;
-    } catch (err) {
-      if (!runtimeError) runtimeError = err.message;
-      return NaN;
-    }
-  };
-
-  if (compileError) {
-    if (out) {
-      out.innerHTML = `<div style="color:var(--danger); font-weight:700;">Lỗi cú pháp hàm số: <code>${compileError}</code> — Hãy kiểm tra lại dấu ngoặc hoặc ký hiệu hàm (VD: <code>ln(1+x)</code> hoặc <code>\\ln(1+x)</code>).</div>`;
-    }
-    return;
-  }
-
   const x0Raw = parseFloat(document.getElementById("calc-x0")?.value ?? "1");
   const x0 = Number.isFinite(x0Raw) ? x0Raw : 0;
   const aRaw = parseFloat(document.getElementById("calc-a")?.value ?? "0");
@@ -1388,7 +1281,6 @@ function runCalculusLab() {
   const a = Number.isFinite(aRaw) ? aRaw : 0;
   const b = Number.isFinite(bRaw) ? bRaw : 0;
 
-  // 1. Tô miền tích phân từ a đến b (hoặc vẽ chia cột Tổng Riemann / Quy tắc Hình thang)
   const showRiemann =
     document.getElementById("toggle-riemann-overlay")?.checked ?? false;
   const riemannMethod =
@@ -1403,279 +1295,421 @@ function runCalculusLab() {
   const riemannNLabel = document.getElementById("riemann-n-label");
   if (riemannNLabel) riemannNLabel.textContent = String(riemannN);
 
-  let riemannApproxSum = NaN;
+  const baseCacheKey = `${width}x${height}|${isDark ? 1 : 0}|${scale}|${calcViewport.offsetX}|${calcViewport.offsetY}|${expr}|${x0}|${a}|${b}|${showRiemann ? riemannMethod + "_" + riemannN : 0}`;
+  const h = 1e-5;
 
-  if (Number.isFinite(a) && Number.isFinite(b) && a !== b) {
-    const lo = Math.min(a, b);
-    const hi = Math.max(a, b);
-    const dirSign = b >= a ? 1 : -1;
+  if (_calcBaseKey !== baseCacheKey || !_calcBaseCanvas) {
+    if (!_calcBaseCanvas) {
+      _calcBaseCanvas = document.createElement("canvas");
+    }
+    if (_calcBaseCanvas.width !== width) _calcBaseCanvas.width = width;
+    if (_calcBaseCanvas.height !== height) _calcBaseCanvas.height = height;
 
-    if (showRiemann) {
-      const dxSub = (hi - lo) / riemannN;
-      let sumAcc = 0;
-      let validBars = 0;
+    const bCtx = _calcBaseCanvas.getContext("2d");
+    bCtx.clearRect(0, 0, width, height);
+    bCtx.fillStyle = isDark ? "#0f172a" : "#ffffff";
+    bCtx.fillRect(0, 0, width, height);
 
-      for (let i = 0; i < riemannN; i++) {
-        const xL = lo + i * dxSub;
-        const xR = xL + dxSub;
-        const pxL = originX + xL * scale;
-        const pxR = originX + xR * scale;
+    const majorStep = getNiceGridStep(scale);
+    const minorStep = majorStep / 5;
 
-        if (riemannMethod === "trapezoid") {
-          const yL = safeEval(xL);
-          const yR = safeEval(xR);
-          if (!Number.isFinite(yL) || !Number.isFinite(yR)) continue;
-          validBars++;
-          sumAcc += 0.5 * (yL + yR) * dxSub * dirSign;
+    const xMinWorld = -originX / scale;
+    const xMaxWorld = (width - originX) / scale;
+    const yMinWorld = (originY - height) / scale;
+    const yMaxWorld = originY / scale;
 
-          const pyL = Math.max(
-            -height,
-            Math.min(height * 2, originY - yL * scale),
-          );
-          const pyR = Math.max(
-            -height,
-            Math.min(height * 2, originY - yR * scale),
-          );
-          const isNeg = yL + yR < 0;
+    bCtx.strokeStyle = isDark
+      ? "rgba(30, 41, 59, 0.55)"
+      : "rgba(226, 232, 240, 0.65)";
+    bCtx.lineWidth = 0.8;
+    const startMinorX = Math.floor(xMinWorld / minorStep) * minorStep;
+    for (let gx = startMinorX; gx <= xMaxWorld; gx += minorStep) {
+      const px = originX + gx * scale;
+      bCtx.beginPath();
+      bCtx.moveTo(px, 0);
+      bCtx.lineTo(px, height);
+      bCtx.stroke();
+    }
+    const startMinorY = Math.floor(yMinWorld / minorStep) * minorStep;
+    for (let gy = startMinorY; gy <= yMaxWorld; gy += minorStep) {
+      const py = originY - gy * scale;
+      bCtx.beginPath();
+      bCtx.moveTo(0, py);
+      bCtx.lineTo(width, py);
+      bCtx.stroke();
+    }
 
-          ctx.fillStyle = isNeg
-            ? "rgba(244, 63, 94, 0.2)"
-            : "rgba(16, 185, 129, 0.22)";
-          ctx.strokeStyle = isNeg
-            ? "rgba(244, 63, 94, 0.78)"
-            : "rgba(16, 185, 129, 0.82)";
-          ctx.lineWidth = riemannN <= 30 ? 1.2 : 0.8;
+    bCtx.strokeStyle = isDark ? "#1e293b" : "#cbd5e1";
+    bCtx.lineWidth = 1.1;
+    const startMajorX = Math.floor(xMinWorld / majorStep) * majorStep;
+    for (let gx = startMajorX; gx <= xMaxWorld; gx += majorStep) {
+      const px = originX + gx * scale;
+      bCtx.beginPath();
+      bCtx.moveTo(px, 0);
+      bCtx.lineTo(px, height);
+      bCtx.stroke();
+    }
+    const startMajorY = Math.floor(yMinWorld / majorStep) * majorStep;
+    for (let gy = startMajorY; gy <= yMaxWorld; gy += majorStep) {
+      const py = originY - gy * scale;
+      bCtx.beginPath();
+      bCtx.moveTo(0, py);
+      bCtx.lineTo(width, py);
+      bCtx.stroke();
+    }
 
-          ctx.beginPath();
-          ctx.moveTo(pxL, originY);
-          ctx.lineTo(pxL, pyL);
-          ctx.lineTo(pxR, pyR);
-          ctx.lineTo(pxR, originY);
-          ctx.closePath();
-          ctx.fill();
-          ctx.stroke();
-        } else {
-          let xSample = (xL + xR) * 0.5;
-          let ySample = NaN;
+    bCtx.strokeStyle = isDark ? "#64748b" : "#334155";
+    bCtx.lineWidth = 1.8;
+    bCtx.beginPath();
+    if (originY >= 0 && originY <= height) {
+      bCtx.moveTo(0, originY);
+      bCtx.lineTo(width, originY);
+    }
+    if (originX >= 0 && originX <= width) {
+      bCtx.moveTo(originX, 0);
+      bCtx.lineTo(originX, height);
+    }
+    bCtx.stroke();
 
-          if (riemannMethod === "left") {
-            xSample = xL;
-            ySample = safeEval(xL);
-          } else if (riemannMethod === "right") {
-            xSample = xR;
-            ySample = safeEval(xR);
-          } else if (riemannMethod === "upper" || riemannMethod === "lower") {
-            let bestY = riemannMethod === "upper" ? -Infinity : Infinity;
-            let bestX = xSample;
-            for (let s = 0; s <= 12; s++) {
-              const xs = xL + (s / 12) * dxSub;
-              const ys = safeEval(xs);
-              if (!Number.isFinite(ys)) continue;
-              if (
-                (riemannMethod === "upper" && ys > bestY) ||
-                (riemannMethod === "lower" && ys < bestY)
-              ) {
-                bestY = ys;
-                bestX = xs;
-              }
-            }
-            if (Number.isFinite(bestY)) {
-              ySample = bestY;
-              xSample = bestX;
-            }
-          } else {
-            ySample = safeEval(xSample);
-          }
+    bCtx.fillStyle = isDark ? "#94a3b8" : "#475569";
+    bCtx.font = "11px monospace";
+    const labelYPos = Math.min(height - 8, Math.max(14, originY + 14));
+    for (let gx = startMajorX; gx <= xMaxWorld; gx += majorStep) {
+      if (Math.abs(gx) < majorStep * 0.25) continue;
+      const px = originX + gx * scale;
+      bCtx.fillText(formatTickLabel(gx), px - 6, labelYPos);
+    }
+    const labelXPos = Math.min(width - 34, Math.max(6, originX + 7));
+    for (let gy = startMajorY; gy <= yMaxWorld; gy += majorStep) {
+      if (Math.abs(gy) < majorStep * 0.25) continue;
+      const py = originY - gy * scale;
+      bCtx.fillText(formatTickLabel(gy), labelXPos, py + 4);
+    }
+    if (originX >= 0 && originX <= width && originY >= 0 && originY <= height) {
+      bCtx.fillText("O", originX - 13, originY + 14);
+    }
 
-          if (!Number.isFinite(ySample)) continue;
-          validBars++;
-          sumAcc += ySample * dxSub * dirSign;
+    let compiledFn = null;
+    let compileError = null;
+    let runtimeError = null;
+    try {
+      compiledFn = compileMathFn(expr);
+      compiledFn(0.5);
+    } catch (err) {
+      compileError = err.message || "Cú pháp biểu thức chưa hợp lệ";
+    }
 
-          const pyTop = Math.max(
-            -height,
-            Math.min(height * 2, originY - ySample * scale),
-          );
-          const rectY = Math.min(originY, pyTop);
-          const rectH = Math.abs(originY - pyTop);
-          const rectW = Math.max(1, pxR - pxL);
+    const localSafeEval = (xVal) => {
+      if (!compiledFn) return NaN;
+      try {
+        const v = compiledFn(xVal);
+        return Number.isFinite(v) ? v : NaN;
+      } catch (err) {
+        if (!runtimeError) runtimeError = err.message;
+        return NaN;
+      }
+    };
 
-          ctx.fillStyle =
-            ySample < 0 ? "rgba(244, 63, 94, 0.2)" : "rgba(16, 185, 129, 0.22)";
-          ctx.strokeStyle =
-            ySample < 0
+    if (compileError) {
+      _calcBaseKey = "";
+      ctx.clearRect(0, 0, width, height);
+      ctx.drawImage(_calcBaseCanvas, 0, 0);
+      if (out) {
+        out.dataset.cacheKey = "";
+        out.innerHTML = `<div style="color:var(--danger); font-weight:700;">Lỗi cú pháp hàm số: <code>${compileError}</code> — Hãy kiểm tra lại dấu ngoặc hoặc ký hiệu hàm (VD: <code>ln(1+x)</code> hoặc <code>\\ln(1+x)</code>).</div>`;
+      }
+      return;
+    }
+
+    let riemannApproxSum = NaN;
+
+    if (Number.isFinite(a) && Number.isFinite(b) && a !== b) {
+      const lo = Math.min(a, b);
+      const hi = Math.max(a, b);
+      const dirSign = b >= a ? 1 : -1;
+
+      if (showRiemann) {
+        const dxSub = (hi - lo) / riemannN;
+        let sumAcc = 0;
+        let validBars = 0;
+
+        for (let i = 0; i < riemannN; i++) {
+          const xL = lo + i * dxSub;
+          const xR = xL + dxSub;
+          const pxL = originX + xL * scale;
+          const pxR = originX + xR * scale;
+
+          if (riemannMethod === "trapezoid") {
+            const yL = localSafeEval(xL);
+            const yR = localSafeEval(xR);
+            if (!Number.isFinite(yL) || !Number.isFinite(yR)) continue;
+            validBars++;
+            sumAcc += 0.5 * (yL + yR) * dxSub * dirSign;
+
+            const pyL = Math.max(
+              -height,
+              Math.min(height * 2, originY - yL * scale),
+            );
+            const pyR = Math.max(
+              -height,
+              Math.min(height * 2, originY - yR * scale),
+            );
+            const isNeg = yL + yR < 0;
+
+            bCtx.fillStyle = isNeg
+              ? "rgba(244, 63, 94, 0.2)"
+              : "rgba(16, 185, 129, 0.22)";
+            bCtx.strokeStyle = isNeg
               ? "rgba(244, 63, 94, 0.78)"
               : "rgba(16, 185, 129, 0.82)";
-          ctx.lineWidth = riemannN <= 30 ? 1.2 : 0.75;
+            bCtx.lineWidth = riemannN <= 30 ? 1.2 : 0.8;
 
-          ctx.fillRect(pxL, rectY, rectW, rectH);
-          ctx.strokeRect(pxL, rectY, rectW, rectH);
+            bCtx.beginPath();
+            bCtx.moveTo(pxL, originY);
+            bCtx.lineTo(pxL, pyL);
+            bCtx.lineTo(pxR, pyR);
+            bCtx.lineTo(pxR, originY);
+            bCtx.closePath();
+            bCtx.fill();
+            bCtx.stroke();
+          } else {
+            let xSample = (xL + xR) * 0.5;
+            let ySample = NaN;
 
-          // Vẽ chấm tròn đánh dấu điểm lấy mẫu f(x_i*) trên đỉnh cột
-          if (riemannN <= 32) {
-            const pxDot = originX + xSample * scale;
-            ctx.fillStyle = ySample < 0 ? "#f43f5e" : "#10b981";
-            ctx.beginPath();
-            ctx.arc(pxDot, pyTop, 2.7, 0, Math.PI * 2);
-            ctx.fill();
+            if (riemannMethod === "left") {
+              xSample = xL;
+              ySample = localSafeEval(xL);
+            } else if (riemannMethod === "right") {
+              xSample = xR;
+              ySample = localSafeEval(xR);
+            } else if (riemannMethod === "upper" || riemannMethod === "lower") {
+              let bestY = riemannMethod === "upper" ? -Infinity : Infinity;
+              let bestX = xSample;
+              for (let s = 0; s <= 12; s++) {
+                const xs = xL + (s / 12) * dxSub;
+                const ys = localSafeEval(xs);
+                if (!Number.isFinite(ys)) continue;
+                if (
+                  (riemannMethod === "upper" && ys > bestY) ||
+                  (riemannMethod === "lower" && ys < bestY)
+                ) {
+                  bestY = ys;
+                  bestX = xs;
+                }
+              }
+              if (Number.isFinite(bestY)) {
+                ySample = bestY;
+                xSample = bestX;
+              }
+            } else {
+              ySample = localSafeEval(xSample);
+            }
+
+            if (!Number.isFinite(ySample)) continue;
+            validBars++;
+            sumAcc += ySample * dxSub * dirSign;
+
+            const pyTop = Math.max(
+              -height,
+              Math.min(height * 2, originY - ySample * scale),
+            );
+            const rectY = Math.min(originY, pyTop);
+            const rectH = Math.abs(originY - pyTop);
+            const rectW = Math.max(1, pxR - pxL);
+
+            bCtx.fillStyle =
+              ySample < 0
+                ? "rgba(244, 63, 94, 0.2)"
+                : "rgba(16, 185, 129, 0.22)";
+            bCtx.strokeStyle =
+              ySample < 0
+                ? "rgba(244, 63, 94, 0.78)"
+                : "rgba(16, 185, 129, 0.82)";
+            bCtx.lineWidth = riemannN <= 30 ? 1.2 : 0.75;
+
+            bCtx.fillRect(pxL, rectY, rectW, rectH);
+            bCtx.strokeRect(pxL, rectY, rectW, rectH);
+
+            if (riemannN <= 32) {
+              const pxDot = originX + xSample * scale;
+              bCtx.fillStyle = ySample < 0 ? "#f43f5e" : "#10b981";
+              bCtx.beginPath();
+              bCtx.arc(pxDot, pyTop, 2.7, 0, Math.PI * 2);
+              bCtx.fill();
+            }
           }
         }
-      }
 
-      if (validBars > 0) riemannApproxSum = sumAcc;
-    } else {
-      const steps = 160;
-      const dxInt = (hi - lo) / steps;
-      ctx.fillStyle = "rgba(59, 130, 246, 0.18)";
-      ctx.beginPath();
-      let areaStarted = false;
-      let firstValidX = lo;
-      let lastValidX = hi;
-      for (let i = 0; i <= steps; i++) {
-        const x = lo + i * dxInt;
-        const y = safeEval(x);
-        if (Number.isFinite(y)) {
-          const clampedPy = Math.max(
-            -height,
-            Math.min(height * 2, originY - y * scale),
-          );
-          if (!areaStarted) {
-            firstValidX = x;
-            ctx.moveTo(originX + firstValidX * scale, originY);
-            areaStarted = true;
-          }
-          lastValidX = x;
-          ctx.lineTo(originX + x * scale, clampedPy);
-        }
-      }
-      if (areaStarted) {
-        ctx.lineTo(originX + lastValidX * scale, originY);
-        ctx.closePath();
-        ctx.fill();
-      }
-    }
-  }
-
-  // Hàm phụ tìm điểm sát biên miền xác định bằng chia đôi (giúp ln(1+x), sqrt(4-x^2) nối liền tới biên)
-  const findDomainEdgePoint = (invalidPx, validPx) => {
-    let lo = invalidPx;
-    let hi = validPx;
-    let bestPx = validPx;
-    let bestY = safeEval((validPx - originX) / scale);
-    for (let step = 0; step < 16; step++) {
-      const mid = (lo + hi) * 0.5;
-      const midY = safeEval((mid - originX) / scale);
-      if (Number.isFinite(midY) && Math.abs(midY) < 1e4) {
-        bestPx = mid;
-        bestY = midY;
-        hi = mid;
+        if (validBars > 0) riemannApproxSum = sumAcc;
       } else {
-        lo = mid;
+        const steps = 160;
+        const dxInt = (hi - lo) / steps;
+        bCtx.fillStyle = "rgba(59, 130, 246, 0.18)";
+        bCtx.beginPath();
+        let areaStarted = false;
+        let firstValidX = lo;
+        let lastValidX = hi;
+        for (let i = 0; i <= steps; i++) {
+          const x = lo + i * dxInt;
+          const y = localSafeEval(x);
+          if (Number.isFinite(y)) {
+            const clampedPy = Math.max(
+              -height,
+              Math.min(height * 2, originY - y * scale),
+            );
+            if (!areaStarted) {
+              firstValidX = x;
+              bCtx.moveTo(originX + firstValidX * scale, originY);
+              areaStarted = true;
+            }
+            lastValidX = x;
+            bCtx.lineTo(originX + x * scale, clampedPy);
+          }
+        }
+        if (areaStarted) {
+          bCtx.lineTo(originX + lastValidX * scale, originY);
+          bCtx.closePath();
+          bCtx.fill();
+        }
       }
     }
-    return {
-      px: bestPx,
-      py: Math.max(-height * 2, Math.min(height * 3, originY - bestY * scale)),
+
+    const findDomainEdgePoint = (invalidPx, validPx) => {
+      let lo = invalidPx;
+      let hi = validPx;
+      let bestPx = validPx;
+      let bestY = localSafeEval((validPx - originX) / scale);
+      for (let step = 0; step < 16; step++) {
+        const mid = (lo + hi) * 0.5;
+        const midY = localSafeEval((mid - originX) / scale);
+        if (Number.isFinite(midY) && Math.abs(midY) < 1e4) {
+          bestPx = mid;
+          bestY = midY;
+          hi = mid;
+        } else {
+          lo = mid;
+        }
+      }
+      return {
+        px: bestPx,
+        py: Math.max(
+          -height * 2,
+          Math.min(height * 3, originY - bestY * scale),
+        ),
+      };
     };
-  };
 
-  // 2. Vẽ đồ thị y = f(x) màu xanh dương
-  ctx.strokeStyle = "#3b82f6";
-  ctx.lineWidth = 2.8;
-  ctx.beginPath();
-  let started = false;
-  let prevPy = null;
-  let prevPx = null;
-  let prevValid = false;
-  let plottedCount = 0;
+    bCtx.strokeStyle = "#3b82f6";
+    bCtx.lineWidth = 2.8;
+    bCtx.beginPath();
+    let started = false;
+    let prevPy = null;
+    let prevPx = null;
+    let prevValid = false;
+    let plottedCount = 0;
 
-  for (let px = 0; px <= width; px += 1.5) {
-    const x = (px - originX) / scale;
-    const y = safeEval(x);
-    if (!Number.isFinite(y)) {
-      if (started && prevValid && prevPx !== null) {
-        const edge = findDomainEdgePoint(px, prevPx);
-        ctx.lineTo(edge.px, edge.py);
+    for (let px = 0; px <= width; px += 1.5) {
+      const x = (px - originX) / scale;
+      const y = localSafeEval(x);
+      if (!Number.isFinite(y)) {
+        if (started && prevValid && prevPx !== null) {
+          const edge = findDomainEdgePoint(px, prevPx);
+          bCtx.lineTo(edge.px, edge.py);
+        }
+        started = false;
+        prevPy = null;
+        prevValid = false;
+        prevPx = px;
+        continue;
       }
-      started = false;
-      prevPy = null;
-      prevValid = false;
-      prevPx = px;
-      continue;
-    }
-    plottedCount++;
-    const py = originY - y * scale;
-    // Ngắt nét nếu gặp tiệm cận đứng nhảy vọt
-    if (
-      py < -height * 2 ||
-      py > height * 3 ||
-      (prevPy !== null && Math.abs(py - prevPy) > height * 1.4)
-    ) {
-      started = false;
-      prevPy = null;
-      prevValid = false;
-      prevPx = px;
-      continue;
-    }
-    if (!started) {
-      if (!prevValid && prevPx !== null) {
-        const edge = findDomainEdgePoint(prevPx, px);
-        ctx.moveTo(edge.px, edge.py);
-        ctx.lineTo(px, py);
+      plottedCount++;
+      const py = originY - y * scale;
+      if (
+        py < -height * 2 ||
+        py > height * 3 ||
+        (prevPy !== null && Math.abs(py - prevPy) > height * 1.4)
+      ) {
+        started = false;
+        prevPy = null;
+        prevValid = false;
+        prevPx = px;
+        continue;
+      }
+      if (!started) {
+        if (!prevValid && prevPx !== null) {
+          const edge = findDomainEdgePoint(prevPx, px);
+          bCtx.moveTo(edge.px, edge.py);
+          bCtx.lineTo(px, py);
+        } else {
+          bCtx.moveTo(px, py);
+        }
+        started = true;
       } else {
-        ctx.moveTo(px, py);
+        bCtx.lineTo(px, py);
       }
-      started = true;
-    } else {
-      ctx.lineTo(px, py);
+      prevPy = py;
+      prevPx = px;
+      prevValid = true;
     }
-    prevPy = py;
-    prevPx = px;
-    prevValid = true;
+    bCtx.stroke();
+
+    const y0 = localSafeEval(x0);
+    const yPlus = localSafeEval(x0 + h);
+    const yMinus = localSafeEval(x0 - h);
+    let slope = NaN;
+    if (Number.isFinite(yPlus) && Number.isFinite(yMinus)) {
+      slope = (yPlus - yMinus) / (2 * h);
+    } else if (Number.isFinite(yPlus) && Number.isFinite(y0)) {
+      slope = (yPlus - y0) / h;
+    } else if (Number.isFinite(yMinus) && Number.isFinite(y0)) {
+      slope = (y0 - yMinus) / h;
+    }
+
+    canvas._tangentHandle = null;
+    if (Number.isFinite(y0) && Number.isFinite(slope)) {
+      bCtx.strokeStyle = "#10b981";
+      bCtx.lineWidth = 2;
+      bCtx.setLineDash([6, 4]);
+      bCtx.beginPath();
+      bCtx.moveTo(0, originY - (y0 + slope * (xMinWorld - x0)) * scale);
+      bCtx.lineTo(width, originY - (y0 + slope * (xMaxWorld - x0)) * scale);
+      bCtx.stroke();
+      bCtx.setLineDash([]);
+
+      const handlePx = originX + x0 * scale;
+      const handlePy = originY - y0 * scale;
+      canvas._tangentHandle = { px: handlePx, py: handlePy };
+
+      bCtx.fillStyle = "rgba(16, 185, 129, 0.25)";
+      bCtx.beginPath();
+      bCtx.arc(handlePx, handlePy, 11, 0, Math.PI * 2);
+      bCtx.fill();
+
+      bCtx.fillStyle = "#10b981";
+      bCtx.beginPath();
+      bCtx.arc(handlePx, handlePy, 5.8, 0, Math.PI * 2);
+      bCtx.fill();
+      bCtx.strokeStyle = "#ffffff";
+      bCtx.lineWidth = 1.6;
+      bCtx.stroke();
+    }
+
+    _calcBaseKey = baseCacheKey;
+    _calcBaseMeta = {
+      y0,
+      slope,
+      plottedCount,
+      runtimeError,
+      riemannApproxSum,
+      safeEval: localSafeEval,
+    };
   }
-  ctx.stroke();
 
-  // 3. Vẽ tiếp tuyến tại x0 màu xanh ngọc + tay nắm kéo thả kiểu GeoGebra
-  const h = 1e-5;
-  const y0 = safeEval(x0);
-  const yPlus = safeEval(x0 + h);
-  const yMinus = safeEval(x0 - h);
-  let slope = NaN;
-  if (Number.isFinite(yPlus) && Number.isFinite(yMinus)) {
-    slope = (yPlus - yMinus) / (2 * h);
-  } else if (Number.isFinite(yPlus) && Number.isFinite(y0)) {
-    slope = (yPlus - y0) / h;
-  } else if (Number.isFinite(yMinus) && Number.isFinite(y0)) {
-    slope = (y0 - yMinus) / h;
-  }
+  ctx.clearRect(0, 0, width, height);
+  ctx.drawImage(_calcBaseCanvas, 0, 0);
 
-  canvas._tangentHandle = null;
-  if (Number.isFinite(y0) && Number.isFinite(slope)) {
-    ctx.strokeStyle = "#10b981";
-    ctx.lineWidth = 2;
-    ctx.setLineDash([6, 4]);
-    ctx.beginPath();
-    ctx.moveTo(0, originY - (y0 + slope * (xMinWorld - x0)) * scale);
-    ctx.lineTo(width, originY - (y0 + slope * (xMaxWorld - x0)) * scale);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    const handlePx = originX + x0 * scale;
-    const handlePy = originY - y0 * scale;
-    canvas._tangentHandle = { px: handlePx, py: handlePy };
-
-    ctx.fillStyle = "rgba(16, 185, 129, 0.25)";
-    ctx.beginPath();
-    ctx.arc(handlePx, handlePy, 11, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#10b981";
-    ctx.beginPath();
-    ctx.arc(handlePx, handlePy, 5.8, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 1.6;
-    ctx.stroke();
-  }
+  const { y0, slope, plottedCount, runtimeError, riemannApproxSum, safeEval } =
+    _calcBaseMeta;
 
   // 4. Vẽ đa thức Taylor P_n(x) (chỉ chạy bản dự phòng nếu chưa nạp TaylorEngine từ gemini-ai.js)
   const hasAdvancedTaylor = typeof window.renderTaylorOverlay === "function";
@@ -2093,10 +2127,12 @@ function render2DMatrixTransformCanvas() {
   const infoBar = document.getElementById("mat2d-eigen-readout");
   if (!canvas) return;
 
-  const parentW = canvas.parentElement ? canvas.parentElement.clientWidth : 0;
-  const targetW = parentW > 80 ? Math.max(280, parentW - 2) : 520;
   const targetH = 290;
-  if (canvas.width !== targetW) canvas.width = targetW;
+  if (!mat2DStageState.animRaf || canvas.width === 0) {
+    const parentW = canvas.parentElement ? canvas.parentElement.clientWidth : 0;
+    const targetW = parentW > 80 ? Math.max(280, parentW - 2) : 520;
+    if (canvas.width !== targetW) canvas.width = targetW;
+  }
   if (canvas.height !== targetH) canvas.height = targetH;
 
   const ctx = canvas.getContext("2d");
@@ -2393,29 +2429,41 @@ function update2DMatrixStage(rows, cols, A) {
 
     const cvs = document.getElementById("mat2d-transform-canvas");
     if (cvs) {
+      let mat2DRaf = false;
+      let lastEvt = null;
       cvs.addEventListener("mousemove", (e) => {
-        const rect = cvs.getBoundingClientRect();
-        const px =
-          ((e.clientX - rect.left) / Math.max(1, rect.width)) * cvs.width;
-        const py =
-          ((e.clientY - rect.top) / Math.max(1, rect.height)) * cvs.height;
-        const m = mat2DStageState.matrix;
-        const maxC = Math.max(
-          2.4,
-          Math.abs(m[0][0]) + Math.abs(m[0][1]),
-          Math.abs(m[1][0]) + Math.abs(m[1][1]),
-        );
-        const unit = Math.min(
-          54,
-          Math.max(24, Math.min(cvs.width, cvs.height) / (maxC * 2.35)),
-        );
-        mat2DStageState.hoverWorld = {
-          wx: (px - cvs.width * 0.5) / unit,
-          wy: (cvs.height * 0.52 - py) / unit,
-        };
-        render2DMatrixTransformCanvas();
+        lastEvt = e;
+        if (mat2DRaf) return;
+        mat2DRaf = true;
+        requestAnimationFrame(() => {
+          mat2DRaf = false;
+          if (!lastEvt) return;
+          const rect = cvs.getBoundingClientRect();
+          const px =
+            ((lastEvt.clientX - rect.left) / Math.max(1, rect.width)) *
+            cvs.width;
+          const py =
+            ((lastEvt.clientY - rect.top) / Math.max(1, rect.height)) *
+            cvs.height;
+          const m = mat2DStageState.matrix;
+          const maxC = Math.max(
+            2.4,
+            Math.abs(m[0][0]) + Math.abs(m[0][1]),
+            Math.abs(m[1][0]) + Math.abs(m[1][1]),
+          );
+          const unit = Math.min(
+            54,
+            Math.max(24, Math.min(cvs.width, cvs.height) / (maxC * 2.35)),
+          );
+          mat2DStageState.hoverWorld = {
+            wx: (px - cvs.width * 0.5) / unit,
+            wy: (cvs.height * 0.52 - py) / unit,
+          };
+          render2DMatrixTransformCanvas();
+        });
       });
       cvs.addEventListener("mouseleave", () => {
+        lastEvt = null;
         mat2DStageState.hoverWorld = null;
         render2DMatrixTransformCanvas();
       });
